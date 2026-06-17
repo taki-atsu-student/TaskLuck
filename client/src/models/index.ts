@@ -18,6 +18,7 @@ export interface Shift {
   s: string;
   e: string;
   st: ShiftStatus;
+  note?: string;
 }
 
 export interface Task {

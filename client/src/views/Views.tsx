@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import ShiftRequestForm from '../components/ShiftRequestForm';
+import type { ShiftRequestPayload } from '../types/shift';
 import { Priority, TaskStatus, User, Shift, Task, GachaLog } from '../models';
 
 type AuthViewProps = {
@@ -125,7 +127,7 @@ type ShiftRow = { shift: Shift; user: User | { name: string; ini?: string }; bad
 type ShiftViewProps = {
   isActive: boolean;
   isMgr: boolean;
-  onOpenShiftRequest: () => void;
+  userId: number;
   onOpenShiftCreate: () => void;
   cal: { monthNames: string[]; dayNames: string[]; cells: any[] } | null;
   currentMonthLabel: string;
@@ -142,19 +144,21 @@ type ShiftViewProps = {
   setCsStart: (value: string) => void;
   csEnd: string;
   setCsEnd: (value: string) => void;
-  onShiftRequestSubmit: () => void;
+  onShiftRequestSubmitPayload: (payload: ShiftRequestPayload) => Promise<void> | void;
   onShiftCreateSubmit: () => void;
 };
 
-export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shiftRows, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit }: ShiftViewProps) {
+export function ShiftView({ isActive, isMgr, userId, cal, currentMonthLabel, setCm, shiftRows, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmitPayload, onShiftCreateSubmit }: ShiftViewProps) {
   return (
     <div className={`page ${isActive ? 'show' : ''}`} id="pg-shift">
       <div className="ph">
         <div><div className="pt">シフト管理</div></div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-          <button className="btn" type="button" onClick={onOpenShiftRequest}>+ 希望を提出</button>
-          {isMgr ? <button className="btn btn-dark" id="btn-cs" type="button" onClick={onOpenShiftCreate}>{'+ シフト作成'}</button> : null}
+          {isMgr ? <button className="btn btn-dark" id="btn-cs" type="button" onClick={onShiftCreateSubmit}>{'+ シフト作成'}</button> : null}
         </div>
+      </div>
+      <div className="card" style={{ marginBottom: '16px' }}>
+        <ShiftRequestForm userId={userId} onSubmit={onShiftRequestSubmitPayload} />
       </div>
       <div className="card" style={{ marginBottom: '12px' }}>
         {cal ? (

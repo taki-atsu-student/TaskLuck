@@ -171,7 +171,7 @@ export default function App() {
               <ShiftView
                 isActive={activePage === 'shift'}
                 isMgr={isMgr}
-                onOpenShiftRequest={() => setModal('modal-shift-req')}
+                userId={currentUser?.id ?? 0}
                 onOpenShiftCreate={() => { setModal('modal-cs'); setCsDate(todayIso); }}
                 cal={cal}
                 currentMonthLabel={currentMonthLabel}
@@ -188,7 +188,13 @@ export default function App() {
                 setCsStart={setCsStart}
                 csEnd={csEnd}
                 setCsEnd={setCsEnd}
-                onShiftRequestSubmit={() => handleShiftRequestSubmit(currentUser, reqDate, reqStart, reqEnd, setShifts, setModal, toast)}
+                onShiftRequestSubmitPayload={(payload) => {
+                  if (!currentUser) {
+                    toast('ログインが必要です');
+                    return;
+                  }
+                  handleShiftRequestSubmit(currentUser, payload.date, payload.startTime, payload.endTime, setShifts, setModal, toast);
+                }}
                 onShiftCreateSubmit={() => handleShiftCreateSubmit(csUid, csDate, csStart, csEnd, setShifts, setModal, toast)}
               />
 
