@@ -4,7 +4,7 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const url = 'mongodb+srv://harutsugu0528_db_user:7XPStHJXpgloVF2a@taskluckcluster.uvohavf.mongodb.net/taskluck?appName=TaskLuckCluster';
+const url = 'mongodb+srv://harutsugu0528_db_user:4xsljChdWWi6v67h@taskluckcluster.uvohavf.mongodb.net/taskluck?appName=TaskLuckCluster';
 const dbName = 'taskluck'; // あなたのデータベース名に合わせてください
 
 let client;
