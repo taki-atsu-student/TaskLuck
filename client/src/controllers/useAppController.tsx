@@ -4,22 +4,139 @@ import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, 
 export default function useAppController() {
   const [loginUserId, setLoginUserId] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(USERS_INITIAL);
-  const [shifts, setShifts] = useState<Shift[]>(SHIFTS_INITIAL);
+  const [users, setUsers] = useState<User[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [shiftPatternsMap, setShiftPatternsMap] = useState<Record<number, ShiftPattern[]>>({});
   const shiftPatterns = currentUser
     ? (shiftPatternsMap[currentUser.id] ?? SHIFT_PATTERNS_INITIAL)
     : SHIFT_PATTERNS_INITIAL;
-  const setShiftPatterns: React.Dispatch<React.SetStateAction<ShiftPattern[]>> = (action) => {
+
+  // データ取得用の補助関数
+  const refreshTasks = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/tasks');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setTasks(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch tasks:', e);
+    }
+  };
+
+  const refreshUsers = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setUsers(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch users:', e);
+    }
+  };
+
+  const refreshShifts = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/shifts');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setShifts(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch shifts:', e);
+    }
+  };
+
+  const refreshBusinessInfo = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/business-info');
+      if (res.ok) {
+        const data = await res.json();
+        setBusinessInfo(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch business info:', e);
+    }
+  };
+
+  const refreshNotifications = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setNotifications(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch notifications:', e);
+    }
+  };
+
+  const refreshGachaHistory = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/gacha/history');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setGLog(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch gacha history:', e);
+    }
+  };
+
+  // 初回マウント時に全データを取得
+  useEffect(() => {
+    refreshTasks();
+    refreshUsers();
+    refreshShifts();
+    refreshBusinessInfo();
+    refreshNotifications();
+    refreshGachaHistory();
+  }, []);
+
+  // ユーザーログイン時にそのユーザー固有のシフトパターンを取得
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchShiftPatterns = async () => {
+      try {
+        const res = await fetch(`http://localhost:5001/api/shift-patterns?uid=${currentUser.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setShiftPatternsMap((prev) => ({ ...prev, [currentUser.id]: data }));
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch shift patterns:', e);
+      }
+    };
+    fetchShiftPatterns();
+  }, [currentUser]);
+
+  const setShiftPatterns = async (action: React.SetStateAction<ShiftPattern[]>) => {
     if (!currentUser) return;
     const uid = currentUser.id;
-    setShiftPatternsMap((prev) => {
-      const current = prev[uid] ?? SHIFT_PATTERNS_INITIAL;
-      const next = typeof action === 'function' ? action(current) : action;
-      return { ...prev, [uid]: next };
-    });
+    const current = shiftPatternsMap[uid] ?? SHIFT_PATTERNS_INITIAL;
+    const next = typeof action === 'function' ? action(current) : action;
+
+    try {
+      const res = await fetch('http://localhost:5001/api/shift-patterns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid, patterns: next }),
+      });
+      if (res.ok) {
+        setShiftPatternsMap((prev) => ({ ...prev, [uid]: next }));
+      } else {
+        toast('パターン保存に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toast('通信エラーが発生しました');
+    }
   };
-  const [tasks, setTasks] = useState<Task[]>(TASKS_INITIAL);
+
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(BUSINESS_INFO_INITIAL);
   const [gLog, setGLog] = useState<GachaLog[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -71,50 +188,73 @@ export default function useAppController() {
 
   const unreadCount = notifications.filter((item: Notification) => !item.read && (currentUser?.role === 'manager' ? true : item.uid === currentUser?.id)).length;
   const toggleNotif = () => setNotificationOpen((prev: boolean) => !prev);
-  const readNotif = (id: number) => setNotifications((prev: Notification[]) => prev.map((item: Notification) => item.id === id ? { ...item, read: true } : item));
-  const clearNotifs = () => {
+  
+  const readNotif = async (id: number) => {
+    try {
+      const res = await fetch(`http://localhost:5001/api/notifications/${id}/read`, { method: 'PUT' });
+      if (res.ok) {
+        setNotifications((prev: Notification[]) => prev.map((item: Notification) => item.id === id ? { ...item, read: true } : item));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const clearNotifs = async () => {
     if (!currentUser) return;
-    setNotifications((prev: Notification[]) => prev.map((item: Notification) => currentUser.role === 'manager' || item.uid === currentUser.id ? { ...item, read: true } : item));
+    const toClear = notifications.filter((item) => !item.read && (currentUser.role === 'manager' || item.uid === currentUser.id));
+    try {
+      for (const item of toClear) {
+        await fetch(`http://localhost:5001/api/notifications/${item.id}/read`, { method: 'PUT' });
+      }
+      setNotifications((prev: Notification[]) => prev.map((item: Notification) => currentUser.role === 'manager' || item.uid === currentUser.id ? { ...item, read: true } : item));
+    } catch (e) {
+      console.error(e);
+    }
   };
   
-  const handleNotificationAction = (taskId: number, approved: boolean) => {
+  const handleNotificationAction = async (taskId: number, approved: boolean) => {
     const task = tasks.find((item) => item.id === taskId);
     if (!task) return;
-    // 削除: 通知パネルから承認したら該当の「完了報」通知を消す（重複・未読表示を防止）
+
+    // 通知をDBから削除
+    const matchingNotifs = notifications.filter((item) => item.taskId === taskId && item.title === 'タスク完了報があります');
+    try {
+      for (const item of matchingNotifs) {
+        await fetch(`http://localhost:5001/api/notifications/${item.id}`, { method: 'DELETE' });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
     setNotifications((prev: Notification[]) => prev.filter((item: Notification) => {
       if (item.taskId !== taskId) return true;
-      // only remove '完了報' notifications; keep other unrelated notifications
       if (item.title === 'タスク完了報があります') return false;
       return true;
     }));
 
-    // 承認処理は通知発行を抑止して実行
     handleApproval(taskId, approved, setTasks, tasks, setUsers, toast, true);
   };
   
-  useEffect(() => {
-    if (!currentUser || currentUser.role !== 'manager') return;
-    setNotifications((prev: Notification[]) => {
-      const existingTaskIds = new Set(prev.filter((item) => item.taskId !== undefined).map((item) => item.taskId));
-      const newNotifs = tasks
-        .filter((task) => task.st === 'review' && !existingTaskIds.has(task.id))
-        .map((task) => ({
-          id: Date.now() + task.id,
-          title: 'タスク完了報があります',
-          sub: `「${task.name}」の完了報告が届いています`,
-          read: false,
-          uid: currentUser.id,
-          taskId: task.id,
-        }));
-      if (newNotifs.length === 0) return prev;
-      return [...newNotifs, ...prev];
-    });
-  }, [currentUser, tasks]);
   const updateBusinessInfo = (updater: (prev: BusinessInfo) => BusinessInfo) => setBusinessInfo(updater);
-  const resetBusinessInfo = () => setBusinessInfo(BUSINESS_INFO_INITIAL);
+  const resetBusinessInfo = async () => {
+    await refreshBusinessInfo();
+  };
 
-  const addNotification = (title: string, sub: string, uid: number, taskId?: number) => {
-    setNotifications((prev: Notification[]) => [{ id: Date.now(), title, sub, read: false, uid, taskId }, ...prev]);
+  const addNotification = async (title: string, sub: string, uid: number, taskId?: number) => {
+    try {
+      const res = await fetch('http://localhost:5001/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, sub, uid, taskId }),
+      });
+      if (res.ok) {
+        const newNotif = await res.json();
+        setNotifications((prev: Notification[]) => [newNotif, ...prev]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleLogin = () => {
@@ -255,18 +395,96 @@ export default function useAppController() {
 
   const gachaTask = (tasksParam: Task[], currentUserParam: User | null) => tasksParam.find((task) => task.to === currentUserParam?.id && (task.st === 'in_progress' || task.st === 'review'));
 
-  const handleShiftRequestSubmit = (currentUserParam: User | null, date: string, s: string, e: string, setShiftsFn: (fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
+  const handleShiftRequestSubmit = async (currentUserParam: User | null, date: string, s: string, e: string, setShiftsFn: (fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
     if (!date||!s||!e){toastFn('日付と時間を入力してください');return;}
     if (!currentUserParam) return;
-    setShiftsFn((prev:any)=>[...prev.filter((sh:any)=>!(sh.uid===currentUserParam.id&&sh.date===date&&sh.st==='request')),{id:Date.now(),uid:currentUserParam.id,date,s,e,st:'request',isOff:reqOff}]);
-    setModalFn(null);toastFn('シフト希望を提出しました');
+    try {
+      const res = await fetch('http://localhost:5001/api/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: currentUserParam.id,
+          date,
+          s,
+          e,
+          st: 'request',
+          isOff: reqOff,
+        }),
+      });
+      if (res.ok) {
+        await refreshShifts();
+        setModalFn(null);
+        toastFn('シフト希望を提出しました');
+      } else {
+        toastFn('提出に失敗しました');
+      }
+    } catch (err) {
+      console.error(err);
+      toastFn('通信エラーが発生しました');
+    }
   };
 
-  const handleShiftCreateSubmit = (csUidParam:number, csDateParam:string, csStartParam:string, csEndParam:string, setShiftsFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
+  const handleBulkShiftRequestSubmit = async (entries: Array<{ date: string; patternId: number }>) => {
+    if (!currentUser) return;
+    const monthPrefix = `${cy}-${String(cm + 1).padStart(2, '0')}-`;
+    const newEntries = entries
+      .map((entry) => {
+        const pattern = shiftPatterns.find((p) => p.id === entry.patternId);
+        if (!pattern) return null;
+        return { date: entry.date, s: pattern.workStart, e: pattern.workEnd, isOff: false };
+      })
+      .filter(Boolean);
+
+    try {
+      const res = await fetch('http://localhost:5001/api/shifts/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: currentUser.id,
+          monthPrefix,
+          newEntries,
+        }),
+      });
+      if (res.ok) {
+        await refreshShifts();
+        toast('シフト希望を提出しました');
+        handleNav('shift');
+      } else {
+        toast('シフト提出に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toast('通信エラーが発生しました');
+    }
+  };
+
+  const handleShiftCreateSubmit = async (csUidParam:number, csDateParam:string, csStartParam:string, csEndParam:string, setShiftsFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
     if (!csDateParam||!csStartParam||!csEndParam){toastFn('入力を確認してください');return;}
-    setShiftsFn((prev:any)=>[...prev,{id:Date.now(),uid:csUidParam,date:csDateParam,s:csStartParam,e:csEndParam,st:'confirmed'}]);
-    setModalFn(null);toastFn('シフトを作成しました');
-    addNotification('シフトが確定しました', `${csDateParam} ${csStartParam}-${csEndParam} のシフトが確定されました`, csUidParam);
+    try {
+      const res = await fetch('http://localhost:5001/api/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: csUidParam,
+          date: csDateParam,
+          s: csStartParam,
+          e: csEndParam,
+          st: 'confirmed',
+          isOff: false,
+        }),
+      });
+      if (res.ok) {
+        await refreshShifts();
+        setModalFn(null);
+        toastFn('シフトを作成しました');
+        await addNotification('シフトが確定しました', `${csDateParam} ${csStartParam}-${csEndParam} のシフトが確定されました`, csUidParam);
+      } else {
+        toastFn('シフト作成に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toastFn('通信エラーが発生しました');
+    }
   };
 
   const RARITY: Record<string, { label: string; weight: number }> = {
@@ -287,17 +505,107 @@ export default function useAppController() {
     return 'C';
   };
 
-  const handleTaskStart = (id:number, setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void) => { setTasksFn((prev:any)=>prev.map((task:any)=>task.id===id?{...task,st:'in_progress'}:task)); toastFn('タスクを開始しました'); };
-  const handleRequestDone = (id:number, setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void) => { 
-    setTasksFn((prev:any)=>prev.map((task:any)=>task.id===id?{...task,st:'review'}:task)); 
-    toastFn('完了申請を送信しました');
-    const task = tasks.find((item) => item.id === id);
-    if (task) addNotification('タスク完了報があります', `「${task.name}」の完了報告が届いています`, 1, id);
+  const handleTaskStart = async (id:number, setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ st: 'in_progress', to: currentUser.id }),
+      });
+      if (res.ok) {
+        await refreshTasks();
+        toastFn('タスクを開始しました');
+      } else {
+        toastFn('タスクの開始に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toastFn('通信エラーが発生しました');
+    }
+  };
+
+  const handleRequestDone = async (id:number, setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void) => {
+    try {
+      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ st: 'review' }),
+      });
+      if (res.ok) {
+        await refreshTasks();
+        toastFn('完了申請を送信しました');
+        const task = tasks.find((item) => item.id === id);
+        if (task) {
+          await addNotification('タスク完了報があります', `「${task.name}」の完了報告が届いています`, 1, id);
+        }
+      } else {
+        toastFn('完了申請に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toastFn('通信エラーが発生しました');
+    }
   };
   
-  const handleTaskDelete = (id:number, setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void) => { setTasksFn((prev:any)=>prev.filter((task:any)=>task.id!==id)); toastFn('削除しました'); };
-  const handleTaskTogglePool = (id:number, inPool:boolean, setTasksFn:(fn:any)=>void) => { setTasksFn((prev:any)=>prev.map((task:any)=>task.id===id?{...task,inPool}:task)); };
-  const handleTaskCreateSubmit = (ctNameParam:string, ctDescParam:string, ctPriParam:Priority, ctXpParam:number, currentUserParam:User | null, setTasksFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => { if (!ctNameParam.trim()){ toastFn('タスク名を入力してください'); return; } if (!currentUserParam) return; setTasksFn((prev:any)=>[...prev,{id:Date.now(),name:ctNameParam.trim(),desc:ctDescParam.trim(),pri:ctPriParam,xp:ctXpParam,st:'pending',to:null,by:currentUserParam.id,inPool:true}]); setModalFn(null); toastFn('タスクを追加しました'); };
+  const handleTaskDelete = async (id: number) => {
+    if (!window.confirm("本当に削除しますか？")) return;
+    try {
+      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        toast('削除しました');
+        await refreshTasks();
+      } else {
+        toast('削除に失敗しました');
+      }
+    } catch (error) {
+      console.error("削除エラー:", error);
+      toast('通信エラーが発生しました');
+    }
+  };
+
+  const handleTaskTogglePool = async (id: number, inPool: boolean) => {
+    try {
+      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inPool }),
+      });
+      if (res.ok) {
+        await refreshTasks();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleTaskCreateSubmit = async (ctNameParam:string, ctDescParam:string, ctPriParam:Priority, ctXpParam:number, currentUserParam:User | null, setTasksFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
+    if (!ctNameParam.trim()){ toastFn('タスク名を入力してください'); return; }
+    if (!currentUserParam) return;
+    try {
+      const res = await fetch('http://localhost:5001/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: ctNameParam.trim(),
+          desc: ctDescParam.trim(),
+          pri: ctPriParam,
+          xp: ctXpParam,
+          st: 'pending',
+          inPool: true,
+        }),
+      });
+      if (res.ok) {
+        await refreshTasks();
+        setModalFn(null);
+        toastFn('タスクを追加しました');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const openTaskModal = (task: Task | null) => {
     if (task) {
@@ -347,52 +655,143 @@ export default function useAppController() {
     setGachaLockFn(false);
   };
 
-
-  const handleGacha = (tasksParam:Task[], currentUserParam:User | null, setTasksFn:(fn:any)=>void, setGLogFn:(fn:any)=>void, toastFn:(m:string)=>void, setGachaLockFn:(b:boolean)=>void) => {
+  const handleGacha = async (tasksParam:Task[], currentUserParam:User | null, setTasksFn:(fn:any)=>void, setGLogFn:(fn:any)=>void, toastFn:(m:string)=>void, setGachaLockFn:(b:boolean)=>void) => {
     const avail = tasksParam.filter((task)=>task.st==='pending'&& !task.to);
     if (!avail.length){ toastFn('引けるタスクがありません'); return; }
     if (!currentUserParam) return;
     setGachaLockFn(true);
-    const rk = pickRarity();
-    const rc = RARITY[rk];
-    const chosen = avail[Math.floor(Math.random() * avail.length)];
-    finalizeGachaDraw(chosen, currentUserParam, rk.toLowerCase(), rc.label, setTasksFn, setGLogFn, toastFn, setGachaLockFn);
+    try {
+      const res = await fetch('http://localhost:5001/api/gacha/pull', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ availableTasks: avail }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetch(`http://localhost:5001/api/tasks/${data.task.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ st: 'in_progress', to: currentUserParam.id }),
+        });
+        await refreshTasks();
+        await refreshGachaHistory();
+        toastFn(`「${data.task.name}」が当たりました [${data.rarity}]`);
+      } else {
+        toastFn('ガチャに失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toastFn('通信エラーが発生しました');
+    } finally {
+      setGachaLockFn(false);
+    }
   };
 
-  const handleCompleteGachaTask = (setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void, currentTask?: Task) => {
+  const handleCompleteGachaTask = async (setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void, currentTask?: Task) => {
     if (!currentTask) {
       toastFn('完了するタスクがありません');
       return;
     }
-    setTasksFn((prev:any) => prev.map((task:any) => task.id === currentTask.id ? { ...task, st: 'review' } : task));
-    toastFn('タスクを完了しました');
-  };
-
-  const handleApproval = (id:number, approved:boolean, setTasksFn:(fn:any)=>void, tasksParam:Task[], setUsersFn:(fn:any)=>void, toastFn:(m:string)=>void, suppressNotification = false) => {
-    setTasksFn((prev:any)=>prev.map((task:any)=>task.id===id?{...task,st: approved? 'done':'in_progress'}:task));
-    if (approved){
-      const task = tasksParam.find((item)=>item.id===id);
-      if (task?.to){ 
-        setUsersFn((prev:any)=>prev.map((user:any)=>user.id===task.to?{...user,xp:user.xp+task.xp}:user)); 
-        if (!suppressNotification) {
-          addNotification('タスクが承認されました', `「${task.name}」が承認され +${task.xp} XPが付与されました`, task.to);
-        }
+    try {
+      const res = await fetch(`http://localhost:5001/api/tasks/${currentTask.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ st: 'review' }),
+      });
+      if (res.ok) {
+        await refreshTasks();
+        toastFn('完了申請を送信しました');
+        await addNotification('タスク完了報があります', `「${currentTask.name}」の完了報告が届いています`, 1, currentTask.id);
+      } else {
+        toastFn('送信に失敗しました');
       }
-      toastFn('承認しました');
-    } else { toastFn('却下しました'); }
+    } catch (e) {
+      console.error(e);
+      toastFn('通信エラーが発生しました');
+    }
   };
 
-  const handleStaffCreate = (asNameParam:string, asRoleParam:Role, asSalaryParam:number, setUsersFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
+  const handleApproval = async (id:number, approved:boolean, setTasksFn:(fn:any)=>void, tasksParam:Task[], setUsersFn:(fn:any)=>void, toastFn:(m:string)=>void, suppressNotification = false) => {
+    const task = tasksParam.find((item) => item.id === id);
+    if (!task) return;
+    try {
+      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ st: approved ? 'done' : 'in_progress' }),
+      });
+      if (res.ok) {
+        if (approved && task.to) {
+          const user = users.find((u) => u.id === task.to);
+          if (user) {
+            const newXp = user.xp + task.xp;
+            await fetch(`http://localhost:5001/api/users/${task.to}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ xp: newXp }),
+            });
+            if (!suppressNotification) {
+              await addNotification('タスクが承認されました', `「${task.name}」が承認され +${task.xp} XPが付与されました`, task.to);
+            }
+          }
+        }
+        await refreshTasks();
+        await refreshUsers();
+        toastFn(approved ? '承認しました' : '却下しました');
+      } else {
+        toastFn('操作に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toastFn('通信エラーが発生しました');
+    }
+  };
+
+  const handleStaffCreate = async (asNameParam:string, asRoleParam:Role, asSalaryParam:number, setUsersFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
     if (!asNameParam.trim()){ toastFn('名前を入力してください'); return; }
-    setUsersFn((prev: User[]) => {
-      const newId = prev.length > 0 ? Math.max(...prev.map((u) => u.id)) + 1 : 1;
-      const password = `pass${String(newId).padStart(4, '0')}`;
-      const salaryFields = asRoleParam === 'part'
-        ? { hourlyWage: asSalaryParam }
-        : { monthlySalary: asSalaryParam };
-      return [...prev, { id: newId, name: asNameParam.trim(), role: asRoleParam, xp: 0, ini: asNameParam.trim().charAt(0) || 'S', password, ...salaryFields }];
-    });
-    setModalFn(null); toastFn('スタッフを追加しました');
+    const salaryFields = asRoleParam === 'part'
+      ? { hourlyWage: asSalaryParam }
+      : { monthlySalary: asSalaryParam };
+
+    try {
+      const res = await fetch('http://localhost:5001/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: asNameParam.trim(),
+          role: asRoleParam,
+          ...salaryFields,
+        }),
+      });
+      if (res.ok) {
+        await refreshUsers();
+        setModalFn(null);
+        toastFn('スタッフを追加しました');
+      } else {
+        toastFn('スタッフ追加に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toastFn('通信エラーが発生しました');
+    }
+  };
+
+  const handleSaveBusinessInfo = async () => {
+    try {
+      const res = await fetch('http://localhost:5001/api/business-info', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(businessInfo),
+      });
+      if (res.ok) {
+        toast('店舗設定を保存しました');
+      } else {
+        toast('保存に失敗しました');
+      }
+    } catch (e) {
+      console.error(e);
+      toast('通信エラーが発生しました');
+    }
   };
 
   const staffStats = (usersParam:User[]) => {
@@ -418,5 +817,6 @@ export default function useAppController() {
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskTogglePool, handleTaskCreateSubmit,
     openTaskModal, handleTaskModalSubmit, editingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
+    handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
   } as const;
 }
