@@ -69,60 +69,10 @@ export default function App() {
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskCreateSubmit,
     openTaskModal, handleTaskModalSubmit, editingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
-    handleTaskTogglePool,
+    handleTaskTogglePool, handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
   } = controller;
 
-  // APIを使って削除し、その後でデータを更新する専用の関数
-const handleDeleteTaskApi = async (taskId: string) => {
-  if (!window.confirm("本当に削除しますか？")) return;
 
-  try {
-    const res = await fetch(`http://localhost:5001/api/tasks/${taskId}`, {
-      method: 'DELETE',
-    });
-
-    if (res.ok) {
-      toast('削除しました');
-      // 削除が成功したら、再度データを全件取得し直す
-      const fetchRes = await fetch('http://localhost:5001/api/tasks');
-      const result = await fetchRes.json();
-      if (result.success) {
-        const formatted = result.data.map((t: any) => ({
-          id: t._id,
-          name: t.task_name,
-          desc: t.description,
-          pri: t.priority.toLowerCase() as Priority,
-          xp: t.xp,
-          st: t.task_type === 'NORMAL' ? 'pending' : 'done',
-          to: null, 
-          inPool: t.is_gacha_target
-        }));
-        setTasks(formatted); // 画面を更新！
-      }
-    } else {
-      toast('削除に失敗しました');
-    }
-  } catch (error) {
-    console.error("削除エラー:", error);
-  }
-};
-
- useEffect(() => {
-    const fetchTasksFromDB = async () => {
-      try {
-        const response = await fetch('http://localhost:5001/api/tasks');
-        const tasksArray = await response.json(); // 直接配列として受け取る
-        
-        // 配列であることを確認して状態を更新
-        if (Array.isArray(tasksArray)) {
-          setTasks(tasksArray);
-        }
-      } catch (e) {
-        console.error("データ取得エラー:", e);
-      }
-    };
-    fetchTasksFromDB();
-  }, [setTasks]);
 
 
   const dsObj = useMemo(() => dashboardStats(shifts, tasks, currentUser, isMgr), [shifts, tasks, currentUser, isMgr]);
@@ -269,23 +219,7 @@ const handleDeleteTaskApi = async (taskId: string) => {
                 setShiftPatterns={setShiftPatterns}
                 reqDate={reqDate}
                 setReqDate={setReqDate}
-                onSubmit={(entries) => {
-                  if (!currentUser) return;
-                  const monthPrefix = `${cy}-${String(cm + 1).padStart(2, '0')}-`;
-                  const newShifts = entries
-                    .map((entry) => {
-                      const pattern = shiftPatterns.find((p) => p.id === entry.patternId);
-                      if (!pattern) return null;
-                      return { id: Date.now() + Math.random(), uid: currentUser.id, date: entry.date, s: pattern.workStart, e: pattern.workEnd, st: 'request' as const, isOff: false };
-                    })
-                    .filter(Boolean) as any[];
-                  setShifts((prev) => [
-                    ...prev.filter((sh) => !(sh.uid === currentUser.id && sh.date.startsWith(monthPrefix) && sh.st === 'request')),
-                    ...newShifts,
-                  ]);
-                  toast('シフト希望を提出しました');
-                  handleNav('shift');
-                }}
+                onSubmit={handleBulkShiftRequestSubmit}
                 onCancel={() => handleNav('shift')}
               />
 
@@ -301,10 +235,10 @@ const handleDeleteTaskApi = async (taskId: string) => {
                   priorityBadge={priorityBadge}
                   statusBadge={statusBadge}
                   renderTaskActions={renderTaskActions}
-                  toggleTaskPool={(id, inPool) => handleTaskTogglePool(id, inPool, setTasks)}
+                  toggleTaskPool={handleTaskTogglePool}
                   onOpenTaskModal={() => openTaskModal(null)}
                   onEditTask={(task) => openTaskModal(task)}
-                  onDeleteTask={(taskId) => handleDeleteTaskApi(String(taskId))}
+                  onDeleteTask={handleTaskDelete}
                 />
               ) : null}
               {currentUser?.role === 'part' ? (
@@ -324,6 +258,7 @@ const handleDeleteTaskApi = async (taskId: string) => {
                 updateBusinessInfo={updateBusinessInfo}
                 resetBusinessInfo={resetBusinessInfo}
                 toast={toast}
+                onSave={handleSaveBusinessInfo}
               />
               <StaffView
                 isActive={activePage === 'staff'}

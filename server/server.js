@@ -3,7 +3,16 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDatabase } from './src/config/database.js';
-import taskRoutes from './src/routes/tasks.js'; // パスは環境に合わせて調整
+import taskRoutes from './src/routes/tasks.js';
+import usersRoutes from './src/routes/users.js';
+import shiftsRoutes from './src/routes/shifts.js';
+import shiftPatternsRoutes from './src/routes/shift-patterns.js';
+import businessInfoRoutes from './src/routes/business-info.js';
+import staffRoutes from './src/routes/staff.js';
+import gachaRoutes from './src/routes/gacha.js';
+import gachaSettingsRoutes from './src/routes/gacha-settings.js';
+import approvalRoutes from './src/routes/approval.js';
+import notificationsRoutes from './src/routes/notifications.js';
 
 dotenv.config();
 
@@ -17,6 +26,15 @@ app.use(morgan('dev'));
 
 // ルートの設定
 app.use('/api/tasks', taskRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/shifts', shiftsRoutes);
+app.use('/api/shift-patterns', shiftPatternsRoutes);
+app.use('/api/business-info', businessInfoRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/gacha', gachaRoutes);
+app.use('/api/gacha-settings', gachaSettingsRoutes);
+app.use('/api/approval', approvalRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // エラーをターミナルに強制表示するミドルウェア（必ずルーティングの設定より下に書いてください）
 app.use((err, req, res, next) => {
