@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import './App.css';
 import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, Notification } from './models';
 import useAppController from './controllers/useAppController';
@@ -76,6 +76,8 @@ export default function App() {
 
 
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   const dsObj = useMemo(() => dashboardStats(shifts, tasks, currentUser, isMgr), [shifts, tasks, currentUser, isMgr]);
   const todayShifts = useMemo(() => renderTodayShifts(shifts, users, currentUser), [shifts, users, currentUser]);
   const dashTasks = useMemo(() => dashboardTasks(tasks, currentUser, isMgr), [tasks, currentUser, isMgr]);
@@ -134,8 +136,17 @@ export default function App() {
         />
       ) : (
         <div id="app">
+          <div className="mobile-header">
+            <button className="mobile-logo-btn" type="button" onClick={() => setMobileNavOpen(true)}>
+              <img src="/favicon.png" alt="TaskLuck" />
+              <span className="mobile-logo-name">TaskLuck</span>
+            </button>
+            <div className="sb-avatar">{currentUser.ini}</div>
+          </div>
+
           <div className="layout">
-            <div className="sidebar">
+            <div className={`sidebar${mobileNavOpen ? ' mobile-open' : ''}`}>
+              <button className="sb-close" type="button" onClick={() => setMobileNavOpen(false)}>✕</button>
               <div className="sb-top">
                 <div className="sb-logo">
                   <img src="/favicon.png" alt="TaskLuck" />
@@ -155,7 +166,10 @@ export default function App() {
                     className={`ni ${activePage === item.id ? 'active' : ''}`}
                     type="button"
                     id={`ni-${item.id}`}
-                    onClick={() => item.id === 'notifications' ? toggleNotif() : handleNav(item.id as typeof activePage)}
+                    onClick={() => {
+                      if (item.id === 'notifications') { toggleNotif(); } else { handleNav(item.id as typeof activePage); }
+                      setMobileNavOpen(false);
+                    }}
                   >
                     {ICONS[item.ic]}<span>{item.lbl}</span>
                     {item.id === 'notifications' && unreadCount > 0 ? <span className="ni-badge">{unreadCount}</span> : null}
@@ -163,7 +177,7 @@ export default function App() {
                 ))}
               </nav>
               <div className="sb-footer">
-                <button className="btn-logout" type="button" onClick={logout}>
+                <button className="btn-logout" type="button" onClick={() => { logout(); setMobileNavOpen(false); }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                   ログアウト
                 </button>
@@ -282,6 +296,11 @@ export default function App() {
               />
             </main>
           </div>
+
+          <div
+            className={`sidebar-overlay${mobileNavOpen ? ' open' : ''}`}
+            onClick={() => setMobileNavOpen(false)}
+          />
         </div>
       )}
 
