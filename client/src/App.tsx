@@ -4,6 +4,7 @@ import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, Notificati
 import useAppController from './controllers/useAppController';
 import { AuthView, DashboardView, ShiftView, TaskView, GachaView, BusinessInfoView, StaffView, NotificationPanel } from './views';
 import ShiftRequestScreen from './views/ShiftRequestScreen';
+import ShiftEditView from './views/ShiftEditView';
 
 const ROLE_LABELS: Record<Role, string> = {
   manager: '店長',
@@ -187,7 +188,7 @@ export default function App() {
                 isActive={activePage === 'shift'}
                 isMgr={isMgr}
                 onOpenShiftRequest={() => handleNav('shift-request')}
-                onOpenShiftCreate={() => { setModal('modal-cs'); setCsDate(todayIso); }}
+                onOpenShiftCreate={() => handleNav('shift-edit')}
                 cal={cal}
                 currentMonthLabel={currentMonthLabel}
                 setCm={setCm}
@@ -221,6 +222,19 @@ export default function App() {
                 setReqDate={setReqDate}
                 onSubmit={handleBulkShiftRequestSubmit}
                 onCancel={() => handleNav('shift')}
+              />
+
+              <ShiftEditView
+                isActive={activePage === 'shift-edit'}
+                cal={cal}
+                currentMonthLabel={currentMonthLabel}
+                setCm={setCm}
+                users={users}
+                shifts={shifts}
+                setShifts={setShifts}
+                todayIso={todayIso}
+                toast={toast}
+                onBack={() => handleNav('shift')}
               />
 
               {currentUser?.role !== 'part' ? (
@@ -258,7 +272,6 @@ export default function App() {
                 updateBusinessInfo={updateBusinessInfo}
                 resetBusinessInfo={resetBusinessInfo}
                 toast={toast}
-                onSave={handleSaveBusinessInfo}
               />
               <StaffView
                 isActive={activePage === 'staff'}

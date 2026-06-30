@@ -1,5 +1,6 @@
 export type Role = 'manager' | 'staff' | 'part';
 export type ShiftStatus = 'confirmed' | 'request';
+export type ShiftAssignment = 'hall' | 'kitchen';
 export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'done';
 export type Priority = 'high' | 'mid' | 'low';
 
@@ -30,6 +31,7 @@ export interface Shift {
   e: string;
   st: ShiftStatus;
   isOff?: boolean;
+  assignments?: ShiftAssignment[];
 }
 
 export interface ShiftPattern {
