@@ -1,36 +1,27 @@
-import { MongoClient } from 'mongodb';
-import dotenv from 'dotenv';
-import path from 'path';
+import mongoose from 'mongoose';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-
-const url = 'mongodb+srv://harutsugu0528_db_user:7XPStHJXpgloVF2a@taskluckcluster.uvohavf.mongodb.net/taskluck?appName=TaskLuckCluster';
-const dbName = 'taskluck'; // あなたのデータベース名に合わせてください
-
-let client;
-let db;
-
+// 💡 1. 接続用の関数（安全な .env 読み込み版）
 export const connectDatabase = async () => {
   try {
-    if (db) return db;
-    
-    console.log('=> データベースに接続します...');
-    client = new MongoClient(url);
-    await client.connect();
-    
-    db = client.db(dbName);
-    console.log('MongoDB connection established successfully.');
-    return db;
+    const url = process.env.MONGODB_URI;
+
+    if (!url) {
+      throw new Error("MONGODB_URI が .env ファイルに設定されていません。");
+    }
+
+    await mongoose.connect(url);
+    console.log("🟢 [Database] .envの環境変数を使って安全にMongoDBに接続しました！");
   } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
+    console.error('❌ [Database] MongoDB connection error:', error.message);
     throw error;
   }
 };
 
-// コントローラーからDB操作用オブジェクトを呼び出すための関数
+// 🔥 【復活！】消してしまっていた getDb をここに復元します！
+// これがないと、シフトやスタッフの管理機能（コントローラー）が全滅して即死します。
 export const getDb = () => {
-  if (!db) {
-    throw new Error('Database not initialized. Call connectDatabase first.');
+  if (!mongoose.connection.db) {
+    throw new Error("データベースがまだ初期化されていません。");
   }
-  return db;
+  return mongoose.connection.db;
 };

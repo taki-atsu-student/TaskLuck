@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+
+// 💡 1. 何よりも先に環境変数を読み込む
+dotenv.config();
+
+import serverless from 'serverless-http';
+import mongoose from 'mongoose'; 
 import { connectDatabase } from './src/config/database.js';
 import taskRoutes from './src/routes/tasks.js';
 import usersRoutes from './src/routes/users.js';
@@ -13,8 +19,6 @@ import gachaRoutes from './src/routes/gacha.js';
 import gachaSettingsRoutes from './src/routes/gacha-settings.js';
 import approvalRoutes from './src/routes/approval.js';
 import notificationsRoutes from './src/routes/notifications.js';
-
-dotenv.config();
 
 const app = express();
 const port = 5001;
@@ -44,17 +48,53 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message });
 });
 
-// サーバー起動処理
-const startServer = async () => {
+// 定期バッチ関数
+const autoRegisterMonthlyTasks = async () => {
+  console.log("⏰ 【定期バッチ】月頭の自動タスク登録を開始します...");
+  try {
+    const Task = mongoose.model('Task');
+    const defaultTasks = [
+      { task_name: "月頭の全体ミーティング準備", description: "資料の印刷と部屋の確保", xp: 150 },
+      { task_name: "定期大掃除（床ワックス掛け）", description: "フロア全体の清掃とワックスがけ作業", xp: 300 },
+      { task_name: "在庫棚卸し・発注作業", description: "全商品の在庫数をカウントしてシステムに入力", xp: 200 }
+    ];
+    await Task.insertMany(defaultTasks);
+    console.log("🎉 【定期バッチ】定番タスクの自動登録が正常に完了しました！");
+  } catch (error) {
+    console.error("❌ 【定期バッチ】登録中にエラーが発生しました:", error.message);
+  }
+};
+
+let isConnected = false;
+const initDatabase = async () => {
+  if (isConnected) return;
   try {
     await connectDatabase();
   } catch (error) {
-    console.warn('MongoDB connection was not established:', error.message);
+    console.error('❌ MongoDB connection failed:', error.message);
+    throw error; 
   }
-
-  app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-  });
 };
 
-startServer();
+// 🚀 2. ローカル開発時はDBを待たずに【1秒で即時起動】させる！
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`http://localhost:${port}`);
+  });
+
+  initDatabase().catch(err => {
+    console.warn("⚠️  (裏で接続中...) MongoDBの接続に時間がかかっています:", err.message);
+  });
+}
+
+// 🔥 【復活！】ここが抜けていたため起動エラー（exited with code 1）が起きていました！
+const serverlessHandler = serverless(app);
+
+export const handler = async (event, context) => {
+  await initDatabase();
+  if (event.source === 'aws.events' || event['detail-type'] === 'Scheduled Event') {
+    await autoRegisterMonthlyTasks();
+    return { status: "success", message: "Monthly batch executed successfully" };
+  }
+  return await serverlessHandler(event, context);
+};
