@@ -77,20 +77,46 @@ export default function useAppController() {
     setNotifications((prev: Notification[]) => prev.map((item: Notification) => currentUser.role === 'manager' || item.uid === currentUser.id ? { ...item, read: true } : item));
   };
   
-  const handleNotificationAction = (taskId: number, approved: boolean) => {
-    const task = tasks.find((item) => item.id === taskId);
-    if (!task) return;
-    // 削除: 通知パネルから承認したら該当の「完了報」通知を消す（重複・未読表示を防止）
-    setNotifications((prev: Notification[]) => prev.filter((item: Notification) => {
-      if (item.taskId !== taskId) return true;
-      // only remove '完了報' notifications; keep other unrelated notifications
-      if (item.title === 'タスク完了報があります') return false;
-      return true;
-    }));
+  // 💡 変更部分：[承認]や[却下]が押されたとき、バックエンドに結果を送り、DBから消滅（または復帰）させる
+const handleNotificationAction = async (taskId: number, approved: boolean) => {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task) return;
+  if (!currentUser) return;
 
-    // 承認処理は通知発行を抑止して実行
-    handleApproval(taskId, approved, setTasks, tasks, setUsers, toast, true);
-  };
+  try {
+    // 1. バックエンドの「承認・拒否審査API」を叩く
+    const res = await fetch(`http://localhost:5001/api/tasks/review/${taskId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: approved ? 'APPROVE' : 'REJECT',
+        approvedByUserId: currentUser.id,
+        comment: approved ? '' : 'もう一度作業内容を確認してください'
+      })
+    });
+
+    if (!res.ok) throw new Error('審査処理に失敗しました');
+    const data = await res.json();
+
+    // 2. フロント側の表示も即座に同期させる
+    if (approved) {
+      // 💡 許可されたら：DB側で消滅するので、フロントのリスト（State）からも消し去る！
+      setTasks((prev) => prev.filter((item) => item.id !== taskId));
+      toast('タスクを承認しました。タスクは消滅しました！');
+    } else {
+      // 💡 却下されたら：ステータスを進行中（in_progress）に戻してバイトにやり直させる
+      setTasks((prev) => prev.map((item) => item.id === taskId ? { ...item, st: 'in_progress' } : item));
+      toast('タスクを却下（やり直し要請）しました');
+    }
+
+    // 処理が終わった完了報通知を、通知パネルの一覧から消す
+    setNotifications((prev: Notification[]) => prev.filter((item: Notification) => item.taskId !== taskId));
+
+  } catch (err) {
+    console.error(err);
+    toast('通信エラーが発生しました');
+  }
+};
   
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'manager') return;
@@ -359,14 +385,37 @@ export default function useAppController() {
     finalizeGachaDraw(chosen, currentUserParam, rk.toLowerCase(), rc.label, setTasksFn, setGLogFn, toastFn, setGachaLockFn);
   };
 
-  const handleCompleteGachaTask = (setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void, currentTask?: Task) => {
-    if (!currentTask) {
-      toastFn('完了するタスクがありません');
-      return;
-    }
-    setTasksFn((prev:any) => prev.map((task:any) => task.id === currentTask.id ? { ...task, st: 'review' } : task));
-    toastFn('タスクを完了しました');
-  };
+  // 💡 変更部分：完了ボタンを押したとき、バックエンドに通知を作成させ、stをreviewに変える
+const handleCompleteGachaTask = async (setTasksFn: (fn: any) => void, toastFn: (m: string) => void, currentTask?: Task) => {
+  if (!currentTask) {
+    toastFn('完了するタスクがありません');
+    return;
+  }
+  if (!currentUser) return;
+
+  try {
+    // 1. バックエンドのAPIに送信（タスク割当ID、またはタスクIDを渡す）
+    const res = await fetch(`http://localhost:5001/api/tasks/submit/${currentTask.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        userName: currentUser.name
+      })
+    });
+
+    if (!res.ok) throw new Error('完了報告の送信に失敗しました');
+    const data = await res.json();
+
+    // 2. 画面のタスク状態を「review（承認待ち）」に切り替える
+    setTasksFn((prev: any) => prev.map((task: any) => task.id === currentTask.id ? { ...task, st: 'review' } : task));
+    
+    toastFn('タスクの完了申請を送信し、店長へ通知しました！');
+  } catch (err) {
+    console.error(err);
+    toastFn('通信エラーが発生しました');
+  }
+};
 
   const handleApproval = (id:number, approved:boolean, setTasksFn:(fn:any)=>void, tasksParam:Task[], setUsersFn:(fn:any)=>void, toastFn:(m:string)=>void, suppressNotification = false) => {
     setTasksFn((prev:any)=>prev.map((task:any)=>task.id===id?{...task,st: approved? 'done':'in_progress'}:task));
