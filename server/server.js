@@ -23,8 +23,7 @@ import notificationsRoutes from './src/routes/notifications.js';
 const app = express();
 const port = 5001;
 
-// 【重要】これがないとPOSTのJSONを受け取れません
-app.use(express.json()); 
+app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
@@ -40,10 +39,10 @@ app.use('/api/gacha-settings', gachaSettingsRoutes);
 app.use('/api/approval', approvalRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
-// エラーをターミナルに強制表示するミドルウェア（必ずルーティングの設定より下に書いてください）
+// エラーハンドリング
 app.use((err, req, res, next) => {
   console.error("====== サーバーエラー発生！！ ======");
-  console.error(err.stack); // これでエラーの具体的な場所（行数）がわかります
+  console.error(err.stack);
   console.error("====================================");
   res.status(500).json({ error: err.message });
 });
@@ -70,6 +69,8 @@ const initDatabase = async () => {
   if (isConnected) return;
   try {
     await connectDatabase();
+    isConnected = true;
+    console.log("MongoDB connection established successfully.");
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
     throw error; 
