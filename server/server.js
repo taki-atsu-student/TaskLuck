@@ -2,12 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-
-// 💡 1. 何よりも先に環境変数を読み込む
-dotenv.config();
-
 import serverless from 'serverless-http';
 import mongoose from 'mongoose'; 
+
+dotenv.config();
+
 import { connectDatabase } from './src/config/database.js';
 import taskRoutes from './src/routes/tasks.js';
 import usersRoutes from './src/routes/users.js';
@@ -27,7 +26,6 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
-// ルートの設定
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/shifts', shiftsRoutes);
@@ -39,7 +37,6 @@ app.use('/api/gacha-settings', gachaSettingsRoutes);
 app.use('/api/approval', approvalRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
-// エラーハンドリング
 app.use((err, req, res, next) => {
   console.error("====== サーバーエラー発生！！ ======");
   console.error(err.stack);
@@ -47,9 +44,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message });
 });
 
-// 定期バッチ関数
 const autoRegisterMonthlyTasks = async () => {
-  console.log("⏰ 【定期バッチ】月頭の自動タスク登録を開始します...");
   try {
     const Task = mongoose.model('Task');
     const defaultTasks = [
@@ -58,9 +53,8 @@ const autoRegisterMonthlyTasks = async () => {
       { task_name: "在庫棚卸し・発注作業", description: "全商品の在庫数をカウントしてシステムに入力", xp: 200 }
     ];
     await Task.insertMany(defaultTasks);
-    console.log("🎉 【定期バッチ】定番タスクの自動登録が正常に完了しました！");
   } catch (error) {
-    console.error("❌ 【定期バッチ】登録中にエラーが発生しました:", error.message);
+    console.error("❌ 【定期バッチ】エラー:", error.message);
   }
 };
 
@@ -77,18 +71,16 @@ const initDatabase = async () => {
   }
 };
 
-// 🚀 2. ローカル開発時はDBを待たずに【1秒で即時起動】させる！
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
     console.log(`http://localhost:${port}`);
   });
 
   initDatabase().catch(err => {
-    console.warn("⚠️  (裏で接続中...) MongoDBの接続に時間がかかっています:", err.message);
+    console.warn("⚠️ MongoDB接続待機中:", err.message);
   });
 }
 
-// 🔥 【復活！】ここが抜けていたため起動エラー（exited with code 1）が起きていました！
 const serverlessHandler = serverless(app);
 
 export const handler = async (event, context) => {
