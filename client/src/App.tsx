@@ -66,7 +66,7 @@ export default function App() {
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
     toast, handleLogin, logout, handleNav, isMgr, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
-    renderCalendar, shiftTableRows, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
+    renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskCreateSubmit,
     openTaskModal, handleTaskModalSubmit, editingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
@@ -83,7 +83,6 @@ export default function App() {
   const dashTasks = useMemo(() => dashboardTasks(tasks, currentUser, isMgr), [tasks, currentUser, isMgr]);
   const cal = useMemo(() => renderCalendar(cy, cm, shifts, currentUser), [cy, cm, shifts, currentUser]);
   const currentMonthLabel = useMemo(() => cal?.monthNames[cm] ?? '', [cal, cm]);
-  const shiftRows = useMemo(() => shiftTableRows(shifts, users, currentUser, isMgr), [shifts, users, currentUser, isMgr]);
   const tasksForView = useMemo(() => taskList(tasks, currentUser, isMgr, isStf ?? false, tFilter), [tasks, currentUser, isMgr, isStf, tFilter]);
   const gachaTaskVal = useMemo(() => gachaTask(tasks, currentUser), [tasks, currentUser]);
   const pullTotal = useMemo(() => gLog.length, [gLog]);
@@ -206,7 +205,8 @@ export default function App() {
                 cal={cal}
                 currentMonthLabel={currentMonthLabel}
                 setCm={setCm}
-                shiftRows={shiftRows}
+                shifts={shifts}
+                todayIso={todayIso}
                 users={users}
                 toast={toast}
                 setShifts={setShifts}

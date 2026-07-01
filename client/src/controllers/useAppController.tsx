@@ -373,20 +373,6 @@ export default function useAppController() {
     return { monthNames, dayNames, cells };
   };
 
-  const shiftTableRows = (shiftsParam: Shift[], usersParam: User[], currentUserParam: User | null, isMgrParam: boolean) => {
-    const list = isMgrParam
-      ? [...shiftsParam].sort((a, b) => a.date.localeCompare(b.date))
-      : shiftsParam.filter((shift) => shift.uid === currentUserParam?.id).sort((a, b) => a.date.localeCompare(b.date));
-
-    return list.map((shift) => {
-      const user = usersParam.find((item) => item.id === shift.uid) ?? { name: '?' };
-      const badge = shift.st === 'confirmed'
-        ? { label: '確定', cls: 'b b-green' }
-        : { label: '希望', cls: 'b b-orange' };
-      return { shift, user, badge };
-    });
-  };
-
   const taskList = (tasksParam: Task[], currentUserParam: User | null, isMgrParam: boolean, isStfParam: boolean, tFilterParam: TaskStatus | 'all' | 'progress') => {
     let list = isMgrParam || isStfParam ? tasksParam : tasksParam.filter((task) => task.to === currentUserParam?.id || !task.to);
     if (tFilterParam !== 'all' && tFilterParam !== 'progress') list = list.filter((task) => task.st === tFilterParam);
@@ -813,7 +799,7 @@ export default function useAppController() {
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
     toast, handleLogin, logout, handleNav, isMgr, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
-    renderCalendar, shiftTableRows, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
+    renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskTogglePool, handleTaskCreateSubmit,
     openTaskModal, handleTaskModalSubmit, editingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
