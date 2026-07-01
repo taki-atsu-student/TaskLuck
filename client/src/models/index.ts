@@ -1,5 +1,6 @@
 export type Role = 'manager' | 'staff' | 'part';
 export type ShiftStatus = 'confirmed' | 'request';
+export type ShiftAssignment = 'hall' | 'kitchen';
 export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'done';
 export type Priority = 'high' | 'mid' | 'low';
 
@@ -31,6 +32,7 @@ export interface Shift {
   e: string;
   st: ShiftStatus;
   isOff?: boolean;
+  assignments?: ShiftAssignment[];
 }
 
 export interface ShiftPattern {
@@ -140,6 +142,10 @@ export const BUSINESS_INFO_INITIAL: BusinessInfo = {
     holiday: { normal: 4, busy: 5 },
   },
   timeSlotStaffing: [
+    { id: '6', label: '6:00 - 7:00', weekday: 0, holiday: 0 },
+    { id: '7', label: '7:00 - 8:00', weekday: 0, holiday: 0 },
+    { id: '8', label: '8:00 - 9:00', weekday: 0, holiday: 0 },
+    { id: '9', label: '9:00 - 10:00', weekday: 0, holiday: 0 },
     { id: '10', label: '10:00 - 11:00', weekday: 2, holiday: 3 },
     { id: '11', label: '11:00 - 12:00', weekday: 3, holiday: 4 },
     { id: '12', label: '12:00 - 13:00', weekday: 3, holiday: 4 },
@@ -150,6 +156,10 @@ export const BUSINESS_INFO_INITIAL: BusinessInfo = {
     { id: '17', label: '17:00 - 18:00', weekday: 0, holiday: 0 },
     { id: '18', label: '18:00 - 19:00', weekday: 0, holiday: 0 },
     { id: '19', label: '19:00 - 20:00', weekday: 0, holiday: 0 },
+    { id: '20', label: '20:00 - 21:00', weekday: 0, holiday: 0 },
+    { id: '21', label: '21:00 - 22:00', weekday: 0, holiday: 0 },
+    { id: '22', label: '22:00 - 23:00', weekday: 0, holiday: 0 },
+    { id: '23', label: '23:00 - 24:00', weekday: 0, holiday: 0 },
   ],
   specialRules: [
     { id: 1, date: '2024-08-15', type: 'specialClosed', time: '-', note: 'お盆休み' },

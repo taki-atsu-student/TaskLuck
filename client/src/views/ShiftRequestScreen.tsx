@@ -152,8 +152,8 @@ export default function ShiftRequestScreen({
         .sr-cell.sel { box-shadow: 0 0 0 2px #4b9be0; background: transparent !important; }
         .sr-cell.closed { background: #dcf6e5 !important; cursor: default; }
         .sr-cell.closed:hover { background: #dcf6e5 !important; }
-        .sr-shift { position: relative; display: flex; align-items: center; justify-content: center; margin-top: 4px; font-size: 10px; font-weight: 600; border-radius: 5px; padding: 3px 5px; line-height: 1.2; }
-        .sr-x { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border: none; border-radius: 50%; background: #1d1d1f; color: #fff; font-size: 11px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .12s; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .sr-shift { display: flex; align-items: center; justify-content: center; margin-top: 4px; font-size: 10px; font-weight: 600; border-radius: 5px; padding: 3px 5px; line-height: 1.2; width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sr-x { position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border: none; border-radius: 50%; background: #1d1d1f; color: #fff; font-size: 10px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .12s; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 1; }
         .sr-cell:hover .sr-x { opacity: 1; }
         .sr-x:hover { background: #d8413f; }
       `}</style>
