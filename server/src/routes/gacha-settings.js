@@ -1,9 +1,13 @@
+import express from 'express';
 import mongoose from 'mongoose';
 
+const router = express.Router();
+
 // ==========================================
-//  社員以上が「許可（承認）」または「拒否」をする
+// 🎯 社員以上が「許可（承認）」または「拒否」をする
+//    POST /api/gacha-settings/review/:assignmentId 
 // ==========================================
-export const reviewTaskAssignment = async (req, res, next) => {
+router.post('/review/:assignmentId', async (req, res, next) => {
   try {
     const { assignmentId } = req.params;
     const { action, approvedByUserId, comment } = req.body; // action: 'APPROVE' または 'REJECT'
@@ -11,7 +15,7 @@ export const reviewTaskAssignment = async (req, res, next) => {
     const TaskAssignment = mongoose.model('TaskAssignment');
     const Task = mongoose.model('Task');
     const User = mongoose.model('User');
-    const Notification = mongoose.model('Notification'); // 💡 通知モデル
+    const Notification = mongoose.model('Notification'); 
 
     // 1. 対象の割当データを取得
     const assignment = await TaskAssignment.findById(assignmentId);
@@ -26,22 +30,20 @@ export const reviewTaskAssignment = async (req, res, next) => {
     // パターンA: 【許可（APPROVE）】の場合
     // ==========================================
     if (action === 'APPROVE') {
-      // ステータスをAPPROVEDに更新
       assignment.status = 'APPROVED';
       assignment.approved_at = new Date();
       assignment.approved_by = approvedByUserId;
       await assignment.save();
 
-      // 経験値(XP)の付与
+      // 経験値(XP)の付与（一本化した構造 current_xp に合わせる）
       if (originalTask) {
         await User.findByIdAndUpdate(assignment.user_id, {
-          $inc: { xp_total: originalTask.xp }
+          $inc: { current_xp: originalTask.xp } // 💡 完全版のフィールド名に調整
         });
-        // 💡 【タスク消滅！】
         await Task.findByIdAndDelete(assignment.task_id);
       }
 
-      // 💡 アルバイトへの「合格通知」をDBに作成
+      // アルバイトへの「合格通知」をDBに作成
       const newNotification = new Notification({
         user_id: assignment.user_id,
         title: "🎉 タスク承認完了！",
@@ -61,15 +63,14 @@ export const reviewTaskAssignment = async (req, res, next) => {
     // パターンB: 【拒否（REJECT）】の場合
     // ==========================================
     if (action === 'REJECT') {
-      // ステータスを「ASSIGNED（割当済）」に戻して、もう一度やり直させる！
       assignment.status = 'ASSIGNED'; 
       await assignment.save();
 
-      // 💡 アルバイトへの「不合格・やり直し通知」をDBに作成
+      // アルバイトへの「不合格・やり直し通知」をDBに作成
       const newNotification = new Notification({
         user_id: assignment.user_id,
         title: "⚠️ タスクやり直し通知",
-        message: `「${taskName}」の承認が見送られました。理由: ${comment || 'もう一度確認してください'}`,
+        message: `「${taskName}」の承認が見見送られました。理由: ${comment || 'もう一度確認してください'}`,
         type: 'REJECT',
         created_at: new Date()
       });
@@ -85,4 +86,6 @@ export const reviewTaskAssignment = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+});
+
+export default router;

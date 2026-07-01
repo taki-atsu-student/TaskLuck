@@ -7,6 +7,7 @@ type BusinessInfoViewProps = {
   updateBusinessInfo: (updater: (prev: BusinessInfo) => BusinessInfo) => void;
   resetBusinessInfo: () => void;
   toast: (message: string) => void;
+  onSave: () => Promise<void>;
 };
 
 const BUSINESS_DAYS: Array<{ key: BusinessDayKey; label: string; short: string }> = [

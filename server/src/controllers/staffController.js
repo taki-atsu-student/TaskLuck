@@ -1,8 +1,6 @@
 import { getDb } from '../config/database.js';
-// 💡 AWS SDKをインポート（後で npm install します）
 import { CognitoIdentityProviderClient, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 
-// Cognitoのクライアント初期化（東京リージョン）
 const cognitoClient = new CognitoIdentityProviderClient({ region: "ap-northeast-1" });
 
 // 🎯 1. スタッフ一覧取得 (GET /api/staff)
@@ -11,13 +9,13 @@ export const getStaffList = async (req, res) => {
     const db = getDb();
     const rawUsers = await db.collection('users').find().toArray();
     
-    // フロント（React）の型に合わせてデータを整形して返す
+    // 完全版のDB構造 (id, current_xp) をフロントの期待する型に整えて返す
     const users = rawUsers.map(u => ({
-      id: Number(u.user_id), // フロントの型に合わせて数値化
-      username: u.username || `user${u.user_id}`, // 💡 ログイン用のユーザー名を追加
+      id: Number(u.id), 
+      username: u.username || `user${u.id}`, 
       name: u.name || "",
-      role: u.role || "part", // 'manager' か 'part' か 'staff'
-      xp: parseInt(u.xp, 10) || 0, // 累計XP
+      role: (u.role || "STAFF").toLowerCase() === 'manager' ? 'manager' : 'part', // フロントの型 (manager/part/staff) に丸める
+      xp: parseInt(u.current_xp, 10) || 0, // 完全版のフィールド「current_xp」に合わせる
       ini: u.ini || (u.name ? u.name.charAt(0) : "S"),
       password: u.password || ""
     }));
@@ -29,7 +27,7 @@ export const getStaffList = async (req, res) => {
   }
 };
 
-// 🎯 2. スタッフ（アルバイト）の新規登録 (MongoDB + Cognito 連動版)
+// 🎯 2. スタッフの新規登録 (MongoDB + Cognito 連動版)
 export const createStaff = async (req, res) => {
   try {
     const { name, role, salary } = req.body;
@@ -39,58 +37,59 @@ export const createStaff = async (req, res) => {
 
     const db = getDb();
 
-    // 現在の最大user_idを取得して、+1 した新しいIDを発行する
-    const lastUser = await db.collection('users').find().sort({ user_id: -1 }).limit(1).toArray();
-    const newId = lastUser.length > 0 ? Number(lastUser[0].user_id) + 1 : 1;
+    // 現在の最大 id を取得して +1（完全版のフィールド「id」に合わせる）
+    const lastUser = await db.collection('users').find().sort({ id: -1 }).limit(1).toArray();
+    const newId = lastUser.length > 0 ? Number(lastUser[0].id) + 1 : 1;
     
-    const username = `user${newId}`; // 💡 ログイン用ユーザー名 (例: user1, user2)
-    const password = `pass${String(newId).padStart(4, '0')}`; // 💡 ポリシー適合の初期パス (例: pass0001)
+    const username = `user${newId}`; 
+    const password = `pass${String(newId).padStart(4, '0')}`; 
 
-    // ----------------------------------------------------
-    // 🔐 【AWS連携】裏でCognitoにユーザーを自動作成する
-    // ----------------------------------------------------
+    // 🔐 Cognito連動
     try {
-      // .envファイルにプールIDが設定されている場合のみCognitoへリクエストを飛ばす
       if (process.env.COGNITO_USER_POOL_ID) {
         const cognitoParams = {
           UserPoolId: process.env.COGNITO_USER_POOL_ID,
           Username: username,
-          TemporaryPassword: password, // 初期パスワード
+          TemporaryPassword: password,
           UserAttributes: [
-            { Name: "custom:role", Value: role || "part" } // 店長かバイトかの権限を刻む
+            { Name: "custom:role", Value: role || "part" }
           ],
-          MessageAction: "SUPPRESS" // アルバイトへの確認メール送信をスキップ
+          MessageAction: "SUPPRESS"
         };
         
         await cognitoClient.send(new AdminCreateUserCommand(cognitoParams));
         console.log(`🎉 Amazon Cognitoにユーザーを追加しました: ${username}`);
       }
     } catch (cognitoError) {
-      // 💡 お家テスト時など、Cognitoの設定がない・繋がらない時でもエラーで落ちずにログだけ残してDB保存に進むセーフティネット
       console.warn("⚠️ Cognitoへの登録をスキップ、または失敗しました:", cognitoError.message);
     }
-    // ----------------------------------------------------
 
+    // 完全版 users テーブルのデータ構造に完全準拠させる
     const userData = {
-      user_id: newId,
-      username: username, // 💡 ログイン用IDをDBにも保持
+      id: newId,
+      username: username,
       name: name.trim(),
-      role: role || 'part',
-      xp: 0,
-      ini: name.trim().charAt(0) || 'S',
+      email: `${role || 'part'}_${newId}@example.com`,
       password: password,
+      role: role === 'manager' ? 'MANAGER' : 'STAFF', // DB側は大文字統一
+      level: 1,
+      current_xp: 0,
+      next_level_xp: 100,
+      ini: name.trim().charAt(0) || 'S',
       created_at: new Date(),
-      // ロールに合わせて給与フィールドを分ける（詳細設計に準拠）
-      ...(role === 'part' ? { hourly_wage: Number(salary) || 1050 } : { monthly_salary: Number(salary) || 200000 })
+      // 役職に応じた給与フィールドの割り振り
+      hourlyWage: role === 'part' ? (Number(salary) || 1050) : 0,
+      monthlySalary: role !== 'part' ? (Number(salary) || 250010) : 0
     };
 
     await db.collection('users').insertOne(userData);
 
+    // フロント側に返すオブジェクト（フロント側の型定義に丸める）
     res.status(201).json({
       id: newId,
-      username: username, // 💡 画面側に返すデータにも追加
+      username: username,
       name: userData.name,
-      role: userData.role,
+      role: role || 'part',
       xp: 0,
       ini: userData.ini,
       password: userData.password
@@ -111,10 +110,10 @@ export const addStaffXp = async (req, res) => {
 
     const db = getDb();
 
-    // 対象ユーザーの累計XP（xp）をインクリメント（加算）する
+    // 完全版のフィールド「id」と「current_xp」に対して加算を行う
     const result = await db.collection('users').updateOne(
-      { user_id: Number(userId) },
-      { $inc: { xp: Number(xp) } }
+      { id: Number(userId) },
+      { $inc: { current_xp: Number(xp) } }
     );
 
     if (result.matchedCount === 0) {

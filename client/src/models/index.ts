@@ -13,6 +13,7 @@ export interface ExtraWage {
 export interface User {
   id: number;
   name: string;
+  username: string;
   role: Role;
   xp: number;
   ini: string;
@@ -156,13 +157,15 @@ export const BUSINESS_INFO_INITIAL: BusinessInfo = {
     { id: 3, date: '2024-12-24', type: 'shortHours', time: '10:00-17:00', note: 'クリスマス' },
   ],
 };
+
 export const USERS_INITIAL: User[] = [
-  { id: 1, name: '田中 店長', role: 'manager', xp: 0, ini: '田', password: 'pass0001', monthlySalary: 350010 },
-  { id: 2, name: '佐藤 花子', role: 'staff', xp: 320, ini: '佐', password: 'pass0002', monthlySalary: 250010 },
-  { id: 3, name: '鈴木 一郎', role: 'part', xp: 180, ini: '鈴', password: 'pass0003', hourlyWage: 1100 },
-  { id: 4, name: '高橋 美咲', role: 'part', xp: 90, ini: '高', password: 'pass0004', hourlyWage: 1050 },
-  { id: 5, name: '山田 健太', role: 'part', xp: 230, ini: '山', password: 'pass0005', hourlyWage: 1100 },
+  { id: 1, username: 'tanaka_manager', name: '田中 店長', role: 'manager', xp: 0, ini: '田', password: 'pass0001', monthlySalary: 350010 },
+  { id: 2, username: 'sato_manager', name: '佐藤 花子', role: 'staff', xp: 320, ini: '佐', password: 'pass0002', monthlySalary: 250010 },
+  { id: 3, username: 'suzuki_ichiro', name: '鈴木 一郎', role: 'part', xp: 180, ini: '鈴', password: 'pass0003', hourlyWage: 1100 },
+  { id: 4, username: 'takahashi_misaki', name: '高橋 美咲', role: 'part', xp: 90, ini: '高', password: 'pass0004', hourlyWage: 1050 },
+  { id: 5, username: 'yamada_kenta', name: '山田 健太', role: 'part', xp: 230, ini: '山', password: 'pass0005', hourlyWage: 1100 },
 ];
+
 
 export const SHIFTS_INITIAL: Shift[] = [
   { id: 1, uid: 3, date: '2025-06-09', s: '10:00', e: '17:00', st: 'confirmed' },

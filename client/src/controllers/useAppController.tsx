@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, Notification, BusinessInfo, USERS_INITIAL, SHIFTS_INITIAL, SHIFT_PATTERNS_INITIAL, TASKS_INITIAL, BUSINESS_INFO_INITIAL } from '../models';
+import { signIn, fetchAuthSession, signOut } from 'aws-amplify/auth';
 
 export default function useAppController() {
   const [loginUserId, setLoginUserId] = useState<string>('');
@@ -148,13 +149,13 @@ export default function useAppController() {
   const [modal, setModal] = useState<string | null>(null);
   const [toastText, setToastText] = useState('');
   const [gachaLock, setGachaLock] = useState(false);
-  const [reqDate, setReqDate] = useState(new Date().toISOString().slice(0,10));
+  const [reqDate, setReqDate] = useState(new Date().toISOString().slice(0, 10));
   const [reqStart, setReqStart] = useState('09:00');
   const [reqEnd, setReqEnd] = useState('17:00');
   const [reqOff, setReqOff] = useState(false);
   const [reqNote, setReqNote] = useState('');
   const [csUid, setCsUid] = useState<number>(USERS_INITIAL[0]?.id ?? 1);
-  const [csDate, setCsDate] = useState(new Date().toISOString().slice(0,10));
+  const [csDate, setCsDate] = useState(new Date().toISOString().slice(0, 10));
   const [csStart, setCsStart] = useState('09:00');
   const [csEnd, setCsEnd] = useState('17:00');
   const [ctName, setCtName] = useState('');
@@ -167,6 +168,7 @@ export default function useAppController() {
   const [asSalary, setAsSalary] = useState<number>(1050);
   const isMgr = currentUser?.role === 'manager';
   const isStf = currentUser && (currentUser.role === 'manager' || currentUser.role === 'staff');
+  const [password, setPassword] = useState<string>('');
 
   useEffect(() => {
     if (!toastText) return;
@@ -188,7 +190,7 @@ export default function useAppController() {
 
   const unreadCount = notifications.filter((item: Notification) => !item.read && (currentUser?.role === 'manager' ? true : item.uid === currentUser?.id)).length;
   const toggleNotif = () => setNotificationOpen((prev: boolean) => !prev);
-  
+
   const readNotif = async (id: number) => {
     try {
       const res = await fetch(`http://localhost:5001/api/notifications/${id}/read`, { method: 'PUT' });
@@ -212,7 +214,7 @@ export default function useAppController() {
       console.error(e);
     }
   };
-  
+
   const handleNotificationAction = async (taskId: number, approved: boolean) => {
     const task = tasks.find((item) => item.id === taskId);
     if (!task) return;
@@ -235,7 +237,7 @@ export default function useAppController() {
 
     handleApproval(taskId, approved, setTasks, tasks, setUsers, toast, true);
   };
-  
+
   const updateBusinessInfo = (updater: (prev: BusinessInfo) => BusinessInfo) => setBusinessInfo(updater);
   const resetBusinessInfo = async () => {
     await refreshBusinessInfo();
@@ -257,33 +259,65 @@ export default function useAppController() {
     }
   };
 
-  const handleLogin = () => {
-    const normalizedUserId = loginUserId
-      .trim()
-      .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0));
+  const handleLogin = async () => {
+    const normalizedUsername = loginUserId.trim();
 
-    if (!normalizedUserId) {
-      toast('アカウントを選択してください');
+    if (!normalizedUsername || !password) {
+      toast('ユーザー名とパスワードを入力してください');
       return;
     }
 
-    const parsedUserId = Number(normalizedUserId);
-    if (Number.isNaN(parsedUserId)) {
-      toast('ユーザーIDを正しい形式で入力してください');
-      return;
-    }
+    try {
+      // 1. まずサインインを試みる
+      const { isSignedIn, nextStep } = await signIn({
+        username: normalizedUsername,
+        password: password,
+      });
 
-    const selectedUser = users.find((user) => user.id === parsedUserId) ?? null;
-    if (!selectedUser) {
-      toast('アカウントが見つかりません');
-      return;
-    }
+      let authenticated = isSignedIn;
 
-    setCurrentUser(selectedUser);
-    setActivePage('dashboard');
+      // 🔥【ここが裏ワザ】もし「パスワード強制変更」のロックがかかっていたら自動で解除する！
+      if (nextStep && nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
+        const { confirmSignIn } = await import('aws-amplify/auth');
+        const confirmResult = await confirmSignIn({
+          challengeResponse: password, // 今入力している「Pass-0001」で永続確定させる
+        });
+        authenticated = confirmResult.isSignedIn;
+      }
+
+      if (authenticated) {
+        const session = await fetchAuthSession();
+        const token = session.tokens?.accessToken?.toString() ?? null;
+        if (token) {
+          localStorage.setItem('token', token);
+        }
+
+        const selectedUser = users.find(
+          (user) => String(user.username) === String(normalizedUsername)
+        ) ?? null;
+
+        if (!selectedUser) {
+          toast('Cognito認証は成功しましたが、DBにアカウントが存在しません');
+          return;
+        }
+
+        setCurrentUser(selectedUser);
+        setActivePage('dashboard');
+        toast(`${selectedUser.name}としてログインしました！`);
+      }
+    } catch (error: any) {
+      console.error('ログインエラー:', error);
+      toast(`ログイン失敗: ${error.message || 'IDまたはパスワードが違います'}`);
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await signOut(); // Cognitoのセッションもクリア
+    } catch (e) {
+      console.error('Cognitoログアウトエラー:', e);
+    }
+    localStorage.removeItem('token');
     setCurrentUser(null);
     setActivePage('dashboard');
     setLoginUserId('');
@@ -344,11 +378,11 @@ export default function useAppController() {
   };
 
   const renderCalendar = (cyState: number, cmState: number, shiftsParam: Shift[], currentUserParam: User | null) => {
-    const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
     const firstDay = new Date(cyState, cmState, 1).getDay();
     const daysInMonth = new Date(cyState, cmState + 1, 0).getDate();
     const prevMonthDays = new Date(cyState, cmState, 0).getDate();
-    const dayNames = ['日','月','火','水','木','金','土'];
+    const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
     const cells: any[] = [];
 
     for (let i = 0; i < firstDay; i += 1) {
@@ -395,8 +429,8 @@ export default function useAppController() {
 
   const gachaTask = (tasksParam: Task[], currentUserParam: User | null) => tasksParam.find((task) => task.to === currentUserParam?.id && (task.st === 'in_progress' || task.st === 'review'));
 
-  const handleShiftRequestSubmit = async (currentUserParam: User | null, date: string, s: string, e: string, setShiftsFn: (fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
-    if (!date||!s||!e){toastFn('日付と時間を入力してください');return;}
+  const handleShiftRequestSubmit = async (currentUserParam: User | null, date: string, s: string, e: string, setShiftsFn: (fn: any) => void, setModalFn: (m: any) => void, toastFn: (m: string) => void) => {
+    if (!date || !s || !e) { toastFn('日付と時間を入力してください'); return; }
     if (!currentUserParam) return;
     try {
       const res = await fetch('http://localhost:5001/api/shifts', {
@@ -458,8 +492,8 @@ export default function useAppController() {
     }
   };
 
-  const handleShiftCreateSubmit = async (csUidParam:number, csDateParam:string, csStartParam:string, csEndParam:string, setShiftsFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
-    if (!csDateParam||!csStartParam||!csEndParam){toastFn('入力を確認してください');return;}
+  const handleShiftCreateSubmit = async (csUidParam: number, csDateParam: string, csStartParam: string, csEndParam: string, setShiftsFn: (fn: any) => void, setModalFn: (m: any) => void, toastFn: (m: string) => void) => {
+    if (!csDateParam || !csStartParam || !csEndParam) { toastFn('入力を確認してください'); return; }
     try {
       const res = await fetch('http://localhost:5001/api/shifts', {
         method: 'POST',
@@ -505,7 +539,7 @@ export default function useAppController() {
     return 'C';
   };
 
-  const handleTaskStart = async (id:number, setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void) => {
+  const handleTaskStart = async (id: number, setTasksFn: (fn: any) => void, toastFn: (m: string) => void) => {
     if (!currentUser) return;
     try {
       const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
@@ -525,7 +559,7 @@ export default function useAppController() {
     }
   };
 
-  const handleRequestDone = async (id:number, setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void) => {
+  const handleRequestDone = async (id: number, setTasksFn: (fn: any) => void, toastFn: (m: string) => void) => {
     try {
       const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
         method: 'PUT',
@@ -547,7 +581,7 @@ export default function useAppController() {
       toastFn('通信エラーが発生しました');
     }
   };
-  
+
   const handleTaskDelete = async (id: number) => {
     if (!window.confirm("本当に削除しますか？")) return;
     try {
@@ -581,8 +615,8 @@ export default function useAppController() {
     }
   };
 
-  const handleTaskCreateSubmit = async (ctNameParam:string, ctDescParam:string, ctPriParam:Priority, ctXpParam:number, currentUserParam:User | null, setTasksFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
-    if (!ctNameParam.trim()){ toastFn('タスク名を入力してください'); return; }
+  const handleTaskCreateSubmit = async (ctNameParam: string, ctDescParam: string, ctPriParam: Priority, ctXpParam: number, currentUserParam: User | null, setTasksFn: (fn: any) => void, setModalFn: (m: any) => void, toastFn: (m: string) => void) => {
+    if (!ctNameParam.trim()) { toastFn('タスク名を入力してください'); return; }
     if (!currentUserParam) return;
     try {
       const res = await fetch('http://localhost:5001/api/tasks', {
@@ -648,16 +682,16 @@ export default function useAppController() {
     }
   };
 
-  const finalizeGachaDraw = (chosen: Task, currentUserParam: User, rkey: string, rarityLabel: string, setTasksFn:(fn:any)=>void, setGLogFn:(fn:any)=>void, toastFn:(m:string)=>void, setGachaLockFn:(b:boolean)=>void) => {
-    setTasksFn((prev:any) => prev.map((task:any) => task.id === chosen.id ? { ...task, st: 'in_progress', to: currentUserParam.id } : task));
-    setGLogFn((prev:any) => [...prev, { name: chosen.name, xp: chosen.xp, timestamp: Date.now(), rarity: rarityLabel, rkey, time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) }]);
+  const finalizeGachaDraw = (chosen: Task, currentUserParam: User, rkey: string, rarityLabel: string, setTasksFn: (fn: any) => void, setGLogFn: (fn: any) => void, toastFn: (m: string) => void, setGachaLockFn: (b: boolean) => void) => {
+    setTasksFn((prev: any) => prev.map((task: any) => task.id === chosen.id ? { ...task, st: 'in_progress', to: currentUserParam.id } : task));
+    setGLogFn((prev: any) => [...prev, { name: chosen.name, xp: chosen.xp, timestamp: Date.now(), rarity: rarityLabel, rkey, time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) }]);
     toastFn(`「${chosen.name}」が当たりました`);
     setGachaLockFn(false);
   };
 
-  const handleGacha = async (tasksParam:Task[], currentUserParam:User | null, setTasksFn:(fn:any)=>void, setGLogFn:(fn:any)=>void, toastFn:(m:string)=>void, setGachaLockFn:(b:boolean)=>void) => {
-    const avail = tasksParam.filter((task)=>task.st==='pending'&& !task.to);
-    if (!avail.length){ toastFn('引けるタスクがありません'); return; }
+  const handleGacha = async (tasksParam: Task[], currentUserParam: User | null, setTasksFn: (fn: any) => void, setGLogFn: (fn: any) => void, toastFn: (m: string) => void, setGachaLockFn: (b: boolean) => void) => {
+    const avail = tasksParam.filter((task) => task.st === 'pending' && !task.to);
+    if (!avail.length) { toastFn('引けるタスクがありません'); return; }
     if (!currentUserParam) return;
     setGachaLockFn(true);
     try {
@@ -687,7 +721,7 @@ export default function useAppController() {
     }
   };
 
-  const handleCompleteGachaTask = async (setTasksFn:(fn:any)=>void, toastFn:(m:string)=>void, currentTask?: Task) => {
+  const handleCompleteGachaTask = async (setTasksFn: (fn: any) => void, toastFn: (m: string) => void, currentTask?: Task) => {
     if (!currentTask) {
       toastFn('完了するタスクがありません');
       return;
@@ -711,7 +745,7 @@ export default function useAppController() {
     }
   };
 
-  const handleApproval = async (id:number, approved:boolean, setTasksFn:(fn:any)=>void, tasksParam:Task[], setUsersFn:(fn:any)=>void, toastFn:(m:string)=>void, suppressNotification = false) => {
+  const handleApproval = async (id: number, approved: boolean, setTasksFn: (fn: any) => void, tasksParam: Task[], setUsersFn: (fn: any) => void, toastFn: (m: string) => void, suppressNotification = false) => {
     const task = tasksParam.find((item) => item.id === id);
     if (!task) return;
     try {
@@ -747,8 +781,8 @@ export default function useAppController() {
     }
   };
 
-  const handleStaffCreate = async (asNameParam:string, asRoleParam:Role, asSalaryParam:number, setUsersFn:(fn:any)=>void, setModalFn:(m:any)=>void, toastFn:(m:string)=>void) => {
-    if (!asNameParam.trim()){ toastFn('名前を入力してください'); return; }
+  const handleStaffCreate = async (asNameParam: string, asRoleParam: Role, asSalaryParam: number, setUsersFn: (fn: any) => void, setModalFn: (m: any) => void, toastFn: (m: string) => void) => {
+    if (!asNameParam.trim()) { toastFn('名前を入力してください'); return; }
     const salaryFields = asRoleParam === 'part'
       ? { hourlyWage: asSalaryParam }
       : { monthlySalary: asSalaryParam };
@@ -794,9 +828,9 @@ export default function useAppController() {
     }
   };
 
-  const staffStats = (usersParam:User[]) => {
+  const staffStats = (usersParam: User[]) => {
     const total = usersParam.length;
-    const partCount = usersParam.filter((user)=>user.role==='part').length;
+    const partCount = usersParam.filter((user) => user.role === 'part').length;
     const staffCount = total - partCount;
     return { total, partCount, staffCount };
   };
@@ -818,5 +852,6 @@ export default function useAppController() {
     openTaskModal, handleTaskModalSubmit, editingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
     handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
+    password, setPassword,
   } as const;
 }
