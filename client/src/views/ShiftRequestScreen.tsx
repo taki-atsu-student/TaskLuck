@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Dispatch, SetStateAction } from "react";
-import { User, ShiftPattern } from "../models";
+import { User, ShiftPattern, BusinessInfo, BusinessDayKey } from "../models";
 
 type CalCell = {
   type: "prev" | "day" | "next";
@@ -36,9 +36,10 @@ interface ShiftRequestScreenProps {
   setReqDate: (value: string) => void;
   onSubmit: (entries: ShiftRequestEntry[]) => void;
   onCancel: () => void;
+  businessInfo: BusinessInfo;
 }
 
-const CLOSED_DOW = 2;
+const DOW_TO_KEY: BusinessDayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 const PALETTE = [
   { bg: "#dcfce7", fg: "#15803d" },
@@ -61,6 +62,7 @@ export default function ShiftRequestScreen({
   setReqDate,
   onSubmit,
   onCancel,
+  businessInfo,
 }: ShiftRequestScreenProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [registeredShifts, setRegisteredShifts] = useState<Record<string, number>>({});
@@ -79,7 +81,7 @@ export default function ShiftRequestScreen({
   };
 
   const handleSelectDate = (dateKey: string, dow: number) => {
-    if (dow === CLOSED_DOW) return;
+    if (businessInfo.regularClosedDays.includes(DOW_TO_KEY[dow])) return;
     setSelectedDate((prev) => (prev === dateKey ? null : dateKey));
     setReqDate(dateKey);
   };
@@ -218,7 +220,7 @@ export default function ShiftRequestScreen({
                 }
 
                 const dow = cell.dateKey ? new Date(cell.dateKey).getDay() : -1;
-                const closed = dow === CLOSED_DOW;
+                const closed = dow >= 0 && businessInfo.regularClosedDays.includes(DOW_TO_KEY[dow]);
                 const isSel = cell.dateKey === selectedDate;
                 const pid = cell.dateKey ? registeredShifts[cell.dateKey] : undefined;
                 const pattern = pid != null ? shiftPatterns.find((p) => p.id === pid) : null;

@@ -270,6 +270,7 @@ export default function App() {
                 setReqDate={setReqDate}
                 onSubmit={handleBulkShiftRequestSubmit}
                 onCancel={() => handleNav('shift')}
+                businessInfo={businessInfo}
               />
 
               <ShiftEditView
@@ -284,6 +285,7 @@ export default function App() {
                 toast={toast}
                 onBack={() => handleNav('shift')}
                 understaffedDates={understaffedDates}
+                businessInfo={businessInfo}
               />
 
               {currentUser?.role !== 'part' ? (

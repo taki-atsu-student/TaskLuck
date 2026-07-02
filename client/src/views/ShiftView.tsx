@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Shift, ShiftAssignment, User, BusinessInfo } from '../models';
+import { Shift, ShiftAssignment, User, BusinessInfo, BusinessDayKey } from '../models';
 import { ShiftGanttChart, toMin } from '../components/ShiftGanttChart';
 
 type ShiftViewProps = {
@@ -29,7 +29,7 @@ type ShiftViewProps = {
   understaffedDates: Set<string>;
 };
 
-const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+const DOW_TO_KEY: BusinessDayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
 export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo, understaffedDates }: ShiftViewProps) {
@@ -120,7 +120,7 @@ export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCrea
               {cal.cells.map((cell, idx) => {
                 if (cell.type === 'prev' || cell.type === 'next') return <div className="cal-cell other" key={idx}><div className="cal-n">{cell.dateNumber}</div></div>;
                 const dow = cell.dateKey ? new Date(cell.dateKey).getDay() : -1;
-                const closed = dow === 2;
+                const closed = dow >= 0 && businessInfo.regularClosedDays.includes(DOW_TO_KEY[dow]);
                 return (
                   <div className={`cal-cell${cell.isToday ? ' today' : ''}${!closed && understaffedDates.has(cell.dateKey) ? ' understaffed' : ''}${closed ? ' closed' : ''}`} key={cell.dateKey} style={closed ? { background: '#dcf6e5' } : undefined}>
                     <div className="cal-n" style={{ color: dow === 0 ? '#e0506a' : dow === 6 ? '#4b9be0' : undefined }}>{cell.day}</div>

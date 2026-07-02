@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Shift, ShiftAssignment, User } from '../models';
+import { Shift, ShiftAssignment, User, BusinessInfo, BusinessDayKey } from '../models';
 import { ShiftGanttChart, START_MIN, END_MIN, TOTAL_MIN, STEP_MIN, toMin, toTime, roundStep } from '../components/ShiftGanttChart';
 
 type CalendarData = { monthNames: string[]; dayNames: string[]; cells: any[] } | null;
@@ -16,17 +16,18 @@ type ShiftEditViewProps = {
   toast: (message: string) => void;
   onBack: () => void;
   understaffedDates: Set<string>;
+  businessInfo: BusinessInfo;
 };
 
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const ASSIGNMENT_LABELS: Record<ShiftAssignment, string> = { hall: 'ホール', kitchen: 'キッチン' };
-const TEMP_CLOSED_DAY = 2; // 仮設定：火曜日を定休日
+const DOW_TO_KEY: BusinessDayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const HOLIDAYS = new Set([
   '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24','2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06','2025-07-21','2025-08-11','2025-09-15','2025-09-23','2025-10-13','2025-11-03','2025-11-23','2025-11-24',
   '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03'
 ]);
 
-export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates }: ShiftEditViewProps) {
+export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates, businessInfo }: ShiftEditViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editShifts, setEditShifts] = useState<Shift[]>(shifts);
@@ -112,7 +113,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
       isSun: day === 0,
       isSat: day === 6,
       isHoliday: HOLIDAYS.has(dateKey),
-      isClosed: day === TEMP_CLOSED_DAY,
+      isClosed: businessInfo.regularClosedDays.includes(DOW_TO_KEY[day]),
     };
   };
 
