@@ -15,6 +15,7 @@ type ShiftEditViewProps = {
   todayIso: string;
   toast: (message: string) => void;
   onBack: () => void;
+  understaffedDates: Set<string>;
 };
 
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -25,7 +26,7 @@ const HOLIDAYS = new Set([
   '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03'
 ]);
 
-export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack }: ShiftEditViewProps) {
+export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates }: ShiftEditViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editShifts, setEditShifts] = useState<Shift[]>(shifts);
@@ -36,6 +37,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
   const [memoText, setMemoText] = useState('');
   const [activeTab, setActiveTab] = useState<ShiftAssignment>('hall');
   const [addAssignments, setAddAssignments] = useState<ShiftAssignment[]>(['hall']);
+  const [deleteTarget, setDeleteTarget] = useState<Shift | null>(null);
 
   const displayUsers = useMemo(() => {
     const base = users.length ? users : [];
@@ -173,6 +175,14 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
     });
   };
 
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    setEditShifts((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+    setDeleteTarget(null);
+    setIsDirty(true);
+    toast('シフトを削除しました');
+  };
+
   const saveAll = () => {
     setShifts(() => editShifts);
     setIsDirty(false);
@@ -270,7 +280,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
                 const flags = getCellFlags(cell.dateKey);
                 return (
                   <div
-                    className={`cal-cell edit-cell${cell.isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${flags.isSun || flags.isHoliday ? ' day-red' : ''}${flags.isSat ? ' day-blue' : ''}${flags.isClosed ? ' closed' : ''}`}
+                    className={`cal-cell edit-cell${cell.isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${flags.isSun || flags.isHoliday ? ' day-red' : ''}${flags.isSat ? ' day-blue' : ''}${!flags.isClosed && understaffedDates.has(cell.dateKey) ? ' understaffed' : ''}${flags.isClosed ? ' closed' : ''}`}
                     key={cell.dateKey}
                     onClick={() => setSelectedDate(cell.dateKey)}
                     onDoubleClick={(event) => { event.preventDefault(); event.stopPropagation(); openMemo(cell.dateKey); }}
@@ -300,6 +310,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
           onTabChange={setActiveTab}
           rowShifts={rowShifts}
           onBarMouseDown={startDrag}
+          onBarDeleteRequest={(shift) => setDeleteTarget(shift)}
           emptyMessage="この日のシフトはありません。「追加」または「シフト自動作成」で作成してください。"
         />
       </div>
@@ -337,6 +348,19 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
           <div className="mf">
             <button className="btn" type="button" onClick={() => setMemoOpen(false)}>キャンセル</button>
             <button className="btn btn-dark" type="button" onClick={saveMemo}>保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div className={`overlay ${deleteTarget ? 'open' : ''}`} onClick={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}>
+        <div className="modal">
+          <h3>シフトを削除</h3>
+          <p style={{ fontSize: '13px', color: '#555', margin: '8px 0 16px' }}>
+            {deleteTarget ? `${deleteTarget.s}〜${deleteTarget.e} のシフトを削除しますか？` : ''}
+          </p>
+          <div className="mf">
+            <button className="btn" type="button" onClick={() => setDeleteTarget(null)}>キャンセル</button>
+            <button className="btn btn-danger" type="button" onClick={confirmDelete}>削除</button>
           </div>
         </div>
       </div>

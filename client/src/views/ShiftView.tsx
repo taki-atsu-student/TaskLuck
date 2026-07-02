@@ -26,18 +26,40 @@ type ShiftViewProps = {
   onShiftRequestSubmit: () => void;
   onShiftCreateSubmit: () => void;
   businessInfo: BusinessInfo;
+  understaffedDates: Set<string>;
 };
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
-export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo }: ShiftViewProps) {
+export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo, understaffedDates }: ShiftViewProps) {
   const [activeTab, setActiveTab] = useState<ShiftAssignment>('hall');
 
+  const displayUsers = useMemo(() => {
+    const base = users.length ? users : [];
+    const fallback: User[] = [
+      { id: 9001, name: '山田 健太', role: 'part', xp: 0, ini: '山', password: '' },
+      { id: 9002, name: '佐藤 花子', role: 'staff', xp: 0, ini: '佐', password: '' },
+      { id: 9003, name: '田中 翔', role: 'part', xp: 0, ini: '田', password: '' },
+      { id: 9004, name: '中村 葵', role: 'part', xp: 0, ini: '中', password: '' },
+      { id: 9005, name: '伊藤 優', role: 'part', xp: 0, ini: '伊', password: '' },
+      { id: 9006, name: '小林 拓', role: 'staff', xp: 0, ini: '小', password: '' },
+      { id: 9007, name: '加藤 美咲', role: 'part', xp: 0, ini: '加', password: '' },
+      { id: 9008, name: '渡辺 蓮', role: 'part', xp: 0, ini: '渡', password: '' },
+      { id: 9009, name: '松本 結衣', role: 'part', xp: 0, ini: '松', password: '' },
+      { id: 9010, name: '井上 陽太', role: 'part', xp: 0, ini: '井', password: '' },
+    ];
+    const merged = [...base];
+    fallback.forEach((user) => {
+      if (merged.length < 10 && !merged.some((item) => item.name === user.name)) merged.push(user);
+    });
+    return merged.slice(0, 10);
+  }, [users]);
+
   const tabUsers = useMemo((): Record<ShiftAssignment, User[]> => ({
-    hall: users.slice(0, 5),
-    kitchen: users.slice(5, 10),
-  }), [users]);
+    hall: displayUsers.slice(0, 5),
+    kitchen: displayUsers.slice(5, 10),
+  }), [displayUsers]);
 
   const todayTitle = useMemo(() => {
     const d = new Date(todayIso);
@@ -59,10 +81,10 @@ export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCrea
   const visibleUsers = useMemo(() => {
     const base = tabUsers[activeTab];
     const extras = todayTabShifts
-      .map((shift) => users.find((user) => user.id === shift.uid))
+      .map((shift) => displayUsers.find((user) => user.id === shift.uid))
       .filter((user): user is User => !!user && !base.some((b) => b.id === user.id));
     return [...base, ...extras];
-  }, [activeTab, tabUsers, todayTabShifts, users]);
+  }, [activeTab, displayUsers, tabUsers, todayTabShifts]);
 
   const rowShifts = useMemo(() => visibleUsers.map((user) => ({
     user,
@@ -100,16 +122,13 @@ export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCrea
                 const dow = cell.dateKey ? new Date(cell.dateKey).getDay() : -1;
                 const closed = dow === 2;
                 return (
-                  <div className={`cal-cell${cell.isToday ? ' today' : ''}${closed ? ' closed' : ''}`} key={cell.dateKey} style={closed ? { background: '#dcf6e5' } : undefined}>
+                  <div className={`cal-cell${cell.isToday ? ' today' : ''}${!closed && understaffedDates.has(cell.dateKey) ? ' understaffed' : ''}${closed ? ' closed' : ''}`} key={cell.dateKey} style={closed ? { background: '#dcf6e5' } : undefined}>
                     <div className="cal-n" style={{ color: dow === 0 ? '#e0506a' : dow === 6 ? '#4b9be0' : undefined }}>{cell.day}</div>
                     {closed ? (
                       <div style={{ fontSize: '10px', color: '#2f9e57', fontWeight: 600, textAlign: 'center', marginTop: '2px' }}>定休日</div>
                     ) : cell.myShift ? (
                       <div className="cal-ev cal-ev-me">{cell.myShift.s.slice(0, 5)}-{cell.myShift.e.slice(0, 5)}</div>
-                    ) : cell.dayShifts.slice(0, 2).map((shift: Shift) => {
-                      const u = users.find((it) => it.id === shift.uid) ?? { ini: '?' };
-                      return <div className="cal-ev cal-ev-other" key={`s-${shift.id}`}>{u.ini} {shift.s.slice(0, 5)}</div>;
-                    })}
+                    ) : null}
                   </div>
                 );
               })}

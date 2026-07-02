@@ -3,6 +3,7 @@ import './App.css';
 import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, Notification } from './models';
 import useAppController from './controllers/useAppController';
 import { AuthView, DashboardView, ShiftView, TaskView, GachaView, BusinessInfoView, StaffView, NotificationPanel } from './views';
+import { computeUnderstaffedDates } from './utils/shiftStaffing';
 import ShiftRequestScreen from './views/ShiftRequestScreen';
 import ShiftEditView from './views/ShiftEditView';
 
@@ -77,6 +78,37 @@ export default function App() {
 
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwValue, setPwValue] = useState('');
+  const [pwVisible, setPwVisible] = useState(false);
+
+  const handlePwSave = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`http://localhost:5001/api/users/${currentUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwValue }),
+      });
+      if (res.ok) {
+        setUsers((prev) => prev.map((u) => u.id === currentUser.id ? { ...u, password: pwValue } : u));
+        setCurrentUser({ ...currentUser, password: pwValue });
+        setPwOpen(false);
+        toast('パスワードを変更しました');
+      } else {
+        toast('パスワード変更に失敗しました');
+      }
+    } catch {
+      toast('通信エラーが発生しました');
+    }
+  };
+
+  const openPwModal = () => {
+    if (!currentUser) return;
+    setPwValue(currentUser.password ?? '');
+    setPwVisible(false);
+    setPwOpen(true);
+  };
 
   const dsObj = useMemo(() => dashboardStats(shifts, tasks, currentUser, isMgr), [shifts, tasks, currentUser, isMgr]);
   const todayShifts = useMemo(() => renderTodayShifts(shifts, users, currentUser), [shifts, users, currentUser]);
@@ -88,6 +120,7 @@ export default function App() {
   const pullTotal = useMemo(() => gLog.length, [gLog]);
   const pullLast = useMemo(() => gLog.length ? gLog[gLog.length - 1].rarity ?? gLog[gLog.length - 1].name : '—', [gLog]);
   const staffStatsObj = useMemo(() => staffStats(users), [users]);
+  const understaffedDates = useMemo(() => computeUnderstaffedDates(shifts, businessInfo, todayIso), [shifts, businessInfo, todayIso]);
 
   const renderTaskActions = (task: Task) => {
     if (!currentUser) return null;
@@ -137,7 +170,7 @@ export default function App() {
         <div id="app">
           <div className="mobile-header">
             <button className="mobile-logo-btn" type="button" onClick={() => setMobileNavOpen(true)}>
-              <img src="/favicon.png" alt="TaskLuck" />
+              <img src="/favicon2.png" alt="TaskLuck" style={{ height: '36px', width: 'auto' }} />
               <span className="mobile-logo-name">TaskLuck</span>
             </button>
             <div className="sb-avatar">{currentUser.ini}</div>
@@ -150,7 +183,7 @@ export default function App() {
                 <div className="sb-logo">
                   <img src="/favicon.png" alt="TaskLuck" />
                 </div>
-                <div className="sb-user">
+                <div className="sb-user sb-user-clickable" onClick={openPwModal} title="パスワードを変更">
                   <div className="sb-avatar" id="sb-av">{currentUser.ini}</div>
                   <div style={{ minWidth: 0 }}>
                     <div className="sb-uname" id="sb-nm">{currentUser.name}</div>
@@ -221,6 +254,7 @@ export default function App() {
                 onShiftRequestSubmit={() => handleShiftRequestSubmit(currentUser, reqDate, reqStart, reqEnd, setShifts, setModal, toast)}
                 onShiftCreateSubmit={() => handleShiftCreateSubmit(csUid, csDate, csStart, csEnd, setShifts, setModal, toast)}
                 businessInfo={businessInfo}
+                understaffedDates={understaffedDates}
               />
 
               <ShiftRequestScreen
@@ -249,6 +283,7 @@ export default function App() {
                 todayIso={todayIso}
                 toast={toast}
                 onBack={() => handleNav('shift')}
+                understaffedDates={understaffedDates}
               />
 
               {currentUser?.role !== 'part' ? (
@@ -371,6 +406,77 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {pwOpen && currentUser && (() => {
+        const lv = Math.floor(currentUser.xp / 100) + 1;
+        const xpProg = currentUser.xp % 100;
+        const salary = currentUser.role === 'part' ? currentUser.hourlyWage : currentUser.monthlySalary;
+        const salaryLabel = currentUser.role === 'part' ? '時給' : '月給';
+        const infoRow = (label: string, value: string) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: '#86868b' }}>{label}</span>
+            <span style={{ fontSize: '13px', fontWeight: 500 }}>{value}</span>
+          </div>
+        );
+        return (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setPwOpen(false); }}
+          >
+            <div style={{ background: '#fff', borderRadius: '16px', padding: '28px 32px', width: '400px', maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 12px 40px rgba(0,0,0,.18)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#e8e8ed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 700, color: '#444', flexShrink: 0 }}>
+                  {currentUser.ini}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '17px', fontWeight: 700 }}>{currentUser.name}</div>
+                  <div style={{ fontSize: '12px', color: '#86868b', marginTop: '4px' }}>{ROLE_LABELS[currentUser.role]}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '22px' }}>
+                {infoRow('ユーザーID', String(currentUser.id))}
+                {infoRow('役割', ROLE_LABELS[currentUser.role])}
+                <div>
+                  <div style={{ fontSize: '12px', color: '#86868b', marginBottom: '4px' }}>パスワード</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type={pwVisible ? 'text' : 'password'}
+                      value={pwValue}
+                      onChange={(e) => setPwValue(e.target.value)}
+                      style={{ flex: 1, border: '1px solid #ddd', borderRadius: '8px', padding: '7px 10px', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                    <button type="button" onClick={() => setPwVisible((v) => !v)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '14px', color: '#86868b', padding: '4px' }}>
+                      {pwVisible ? '🙈' : '👁'}
+                    </button>
+                  </div>
+                </div>
+                {salary !== undefined ? infoRow(`${salaryLabel}（円）`, salary.toLocaleString()) : null}
+                {(currentUser.extraWages ?? []).filter((w) => w.title).map((w) => (
+                  <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: '#86868b' }}>{w.title}（円）</span>
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>{w.amount.toLocaleString()}</span>
+                  </div>
+                ))}
+                {infoRow('XP', `${currentUser.xp} XP`)}
+                {infoRow('レベル', `Lv.${lv}`)}
+                <div>
+                  <div style={{ fontSize: '11px', color: '#86868b', marginBottom: '4px' }}>次のレベルまで</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, height: '8px', borderRadius: '4px', background: '#e8e8ed', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: '4px', background: 'linear-gradient(90deg,#34c759,#30d158)', width: `${xpProg}%`, transition: 'width .3s' }} />
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#555', minWidth: '50px' }}>{xpProg} / 100</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn" type="button" onClick={() => setPwOpen(false)} style={{ flex: 1, textAlign: 'center' }}>キャンセル</button>
+                <button className="btn btn-dark" type="button" onClick={handlePwSave} style={{ flex: 1, textAlign: 'center' }}>保存</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div id="toast" className={toastText ? 'show' : ''}>{toastText}</div>
     </>

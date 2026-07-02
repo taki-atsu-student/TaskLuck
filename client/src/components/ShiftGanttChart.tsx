@@ -29,9 +29,10 @@ type ShiftGanttChartProps = {
   emptyMessage: string;
   readOnly?: boolean;
   onBarMouseDown?: (event: React.MouseEvent<HTMLDivElement>, shift: Shift, mode: 'move' | 'start' | 'end') => void;
+  onBarDeleteRequest?: (shift: Shift) => void;
 };
 
-export function ShiftGanttChart({ activeTab, onTabChange, rowShifts, emptyMessage, readOnly, onBarMouseDown }: ShiftGanttChartProps) {
+export function ShiftGanttChart({ activeTab, onTabChange, rowShifts, emptyMessage, readOnly, onBarMouseDown, onBarDeleteRequest }: ShiftGanttChartProps) {
   const isEmpty = rowShifts.every((row) => row.shifts.length === 0);
   return (
     <>
@@ -71,6 +72,14 @@ export function ShiftGanttChart({ activeTab, onTabChange, rowShifts, emptyMessag
                     {!readOnly ? <div className="gantt-handle left" onMouseDown={(event) => onBarMouseDown?.(event, shift, 'start')} /> : null}
                     <span>{shift.s}-{shift.e}</span>
                     {!readOnly ? <div className="gantt-handle right" onMouseDown={(event) => onBarMouseDown?.(event, shift, 'end')} /> : null}
+                    {!readOnly ? (
+                      <button
+                        className="gantt-bar-delete"
+                        type="button"
+                        onMouseDown={(event) => event.stopPropagation()}
+                        onClick={(event) => { event.stopPropagation(); onBarDeleteRequest?.(shift); }}
+                      >×</button>
+                    ) : null}
                   </div>
                 );
               })}

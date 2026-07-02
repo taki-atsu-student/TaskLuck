@@ -141,8 +141,8 @@ export default function useAppController() {
   const [gLog, setGLog] = useState<GachaLog[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [cy, setCy] = useState(2025);
-  const [cm, setCm] = useState(5);
+  const [cy, setCy] = useState(() => new Date().getFullYear());
+  const [cm, setCm] = useState(() => new Date().getMonth());
   const [tFilter, setTFilter] = useState<TaskStatus | 'all' | 'progress'>('all');
   const [activePage, setActivePage] = useState<'dashboard' | 'shift' | 'shift-request' | 'shift-edit' | 'task' | 'gacha' | 'business-info' | 'staff' | 'notifications'>('dashboard');
   const [modal, setModal] = useState<string | null>(null);
