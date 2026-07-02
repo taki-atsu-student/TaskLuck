@@ -242,12 +242,13 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 .store-section-icon svg{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .store-section-head h2{font-size:21px;line-height:1.2;font-weight:600;letter-spacing:0;color:#111827;margin:0 0 5px}
 .store-section-head p{font-size:12px;color:#6b7280;margin:0;font-weight:500}
-.staffing-scroll{overflow-x:auto;padding-bottom:4px}
-.staffing-grid{min-width:1220px;width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+.staffing-scroll{overflow-x:auto;padding-bottom:4px;display:flex;flex-direction:column;gap:10px}
+.staffing-part{min-width:0}
+.staffing-grid{min-width:0;width:max-content;border-collapse:separate;border-spacing:0;font-size:13px}
 .staffing-grid thead th{height:46px;background:#eef0f3;color:#222;font-size:13px;font-weight:700;white-space:nowrap;text-align:center;border-bottom:1px solid #e5e7eb}
-.staffing-grid thead th:first-child{width:72px;border-top-left-radius:8px}
+.staffing-grid thead th:first-child{width:72px;border-top-left-radius:8px;position:sticky;left:0;z-index:3;background:#eef0f3}
 .staffing-grid thead th:last-child{border-top-right-radius:8px}
-.staffing-grid tbody th{width:72px;text-align:left;padding:16px 12px;color:#1f2937;font-size:13px;font-weight:700;border-bottom:1px solid #edf0f2;background:#fff;white-space:nowrap}
+.staffing-grid tbody th{width:72px;text-align:left;padding:16px 12px;color:#1f2937;font-size:13px;font-weight:700;border-bottom:1px solid #edf0f2;background:#fff;white-space:nowrap;position:sticky;left:0;z-index:2}
 .staffing-grid td{padding:10px 12px;border-bottom:1px solid #edf0f2;background:#fff;text-align:center}
 .staffing-grid input{width:88px;height:35px;border:1px solid #d7dce2;border-radius:7px;background:#fff;padding:6px 10px;font-size:13px;font-weight:600;color:#111827;box-shadow:inset 0 1px 2px rgba(15,23,42,.05);font-family:inherit}
 .staffing-grid input:focus{outline:none;border-color:#31845b;box-shadow:0 0 0 3px rgba(49,132,91,.12)}
