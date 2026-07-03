@@ -233,6 +233,7 @@ export default function App() {
               <ShiftView
                 isActive={activePage === 'shift'}
                 isMgr={isMgr}
+                isStf={!!isStf}
                 onOpenShiftRequest={() => handleNav('shift-request')}
                 onOpenShiftCreate={() => handleNav('shift-edit')}
                 cal={cal}
