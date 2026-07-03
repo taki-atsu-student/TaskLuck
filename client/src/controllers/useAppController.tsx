@@ -279,8 +279,14 @@ export default function useAppController() {
       // 🔥【ここが裏ワザ】もし「パスワード強制変更」のロックがかかっていたら自動で解除する！
       if (nextStep && nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
         const { confirmSignIn } = await import('aws-amplify/auth');
+        // ⭕️ 必須属性の email も一緒に送信してロックを解除する形に修正
         const confirmResult = await confirmSignIn({
-          challengeResponse: password, // 今入力している「Pass-0001」で永続確定させる
+          challengeResponse: password,
+          options: {
+            userAttributes: {
+              email: `${normalizedUsername}@example.com` // 💡 ユーザー名を使ったダミーメアドを自動設定
+            }
+          }
         });
         authenticated = confirmResult.isSignedIn;
       }
