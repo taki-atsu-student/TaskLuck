@@ -15,6 +15,7 @@
     "concurrently": "^9.1.2"
   },
   "dependencies": {
+    "aws-amplify": "^6.18.0",
     "aws-cdk-lib": "^2.260.0",
     "constructs": "^10.6.0"
   }

@@ -80,7 +80,8 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #e5e5e5;background:#fff;color:#1a1a1a;transition:all .12s;font-family:inherit}
 .btn:hover{background:#f5f5f7;border-color:#d5d5d5}
 .btn-dark{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-.btn-dark:hover{opacity:.85}
+.btn-dark:hover{background:#1a1a1a;border-color:#1a1a1a;opacity:1}
+#pg-task .btn-dark:hover{opacity:1}
 .btn-sm{padding:4px 10px;font-size:11px;border-radius:6px}
 .btn-danger{background:#fff;color:#dc2626;border-color:#fecaca}
 .btn-danger:hover{background:#fef2f2}

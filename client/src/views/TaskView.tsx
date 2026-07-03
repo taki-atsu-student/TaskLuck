@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Priority, TaskStatus, Task, User } from '../models';
 
 type TaskViewProps = {
@@ -27,8 +27,11 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
   const [sortKey, setSortKey] = useState<'name' | 'pri' | 'to' | 'xp' | 'st'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  const [showManageModal, setShowManageModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editNotice, setEditNotice] = useState('');
+  const editNoticeTimeout = useRef<number | null>(null);
   const [dragTaskId, setDragTaskId] = useState<number | null>(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
 
   const activeFilterCount = [
     poolFilter !== 'all',
@@ -80,8 +83,43 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
     setDragTaskId(null);
   };
 
-  const renderTaskRow = (task: Task) => {
+  const toggleTaskSelection = (taskId: number, selected: boolean) => {
+    setSelectedTaskIds((prev) => selected ? [...prev, taskId] : prev.filter((id) => id !== taskId));
+  };
+
+  const selectedCount = selectedTaskIds.length;
+  const selectedTask = selectedCount === 1 ? allTasks.find((task) => task.id === selectedTaskIds[0]) : undefined;
+  const isAllTab = tFilter === 'all';
+
+  useEffect(() => {
+    if (editNoticeTimeout.current) {
+      window.clearTimeout(editNoticeTimeout.current);
+      editNoticeTimeout.current = null;
+    }
+    if (!editNotice) return;
+    editNoticeTimeout.current = window.setTimeout(() => {
+      setEditNotice('');
+      editNoticeTimeout.current = null;
+    }, 5000);
+    return () => {
+      if (editNoticeTimeout.current) {
+        window.clearTimeout(editNoticeTimeout.current);
+        editNoticeTimeout.current = null;
+      }
+    };
+  }, [editNotice]);
+
+  const handleDeleteSelected = () => {
+    if (!onDeleteTask) return;
+    selectedTaskIds.forEach((taskId) => onDeleteTask(taskId));
+    setSelectedTaskIds([]);
+    setShowDeleteConfirm(false);
+    setEditNotice('');
+  };
+
+  const renderTaskRow = (task: Task, showCheckbox: boolean) => {
     const assignee = task.to ? users.find((user) => user.id === task.to) : null;
+    const selected = selectedTaskIds.includes(task.id);
     return (
       <div
         key={task.id}
@@ -89,16 +127,15 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         draggable
         onDragStart={() => handleDragStart(task.id)}
       >
-        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={task.inPool}
-            onChange={(e) => {
-              e.stopPropagation();
-              toggleTaskPool(task.id, e.target.checked);
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+          {showCheckbox && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => toggleTaskSelection(task.id, e.target.checked)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13px', fontWeight: 500 }}>{task.name}</div>
             <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>{task.desc}</div>
@@ -107,7 +144,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
               <span>+{task.xp}XP</span>
             </div>
           </div>
-        </label>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
           {priorityBadge(task.pri)}
           {renderTaskActions(task)}
@@ -122,7 +159,33 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         <div><div className="pt">タスク管理</div></div>
         {isStf ? (
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button className="btn btn-dark" type="button" onClick={() => setShowManageModal(true)}>タスク編集</button>
+            <button
+              className="btn btn-dark"
+              type="button"
+              disabled={selectedCount === 0 || !onEditTask}
+              onClick={() => {
+                if (selectedCount > 1) {
+                  setEditNotice('編集したいタスクにのみチェックを入れてください');
+                  return;
+                }
+                if (selectedTask && onEditTask) {
+                  onEditTask(selectedTask);
+                }
+              }}
+            >
+              タスク編集
+            </button>
+            <button
+              className="btn btn-dark"
+              type="button"
+              disabled={selectedCount === 0}
+              onClick={() => {
+                if (selectedCount === 0) return;
+                setShowDeleteConfirm(true);
+              }}
+            >
+              タスク削除
+            </button>
             <button className="btn btn-dark" id="btn-ct" type="button" onClick={onOpenTaskModal}>+ タスク追加</button>
           </div>
         ) : null}
@@ -221,51 +284,32 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
           </div>
         ) : null}
 
+        {editNotice ? (
+          <div style={{ margin: '10px 0', padding: '10px', borderRadius: '8px', backgroundColor: '#fdecea', color: '#b02a37', fontSize: '13px' }}>
+            {editNotice}
+          </div>
+        ) : null}
+
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', margin: '10px 0', alignItems: 'center' }}>
           <div style={{ color: '#666', fontSize: '13px' }}>
             {activeFilterCount ? `絞り込み条件 ${activeFilterCount} 件設定中` : '絞り込み条件はボタンから設定できます'}
           </div>
         </div>
 
-        {showManageModal ? (
-          <div className="overlay open" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }} onClick={(event) => { if (event.target === event.currentTarget) setShowManageModal(false); }}>
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: 'min(760px,100%)', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 15px 45px rgba(0,0,0,0.12)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>タスク編集</h3>
-                <button className="btn btn-sm" type="button" onClick={() => setShowManageModal(false)}>閉じる</button>
+        {showDeleteConfirm ? (
+          <div className="overlay open" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }} onClick={(event) => { if (event.target === event.currentTarget) setShowDeleteConfirm(false); }}>
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: 'min(420px,100%)', boxShadow: '0 15px 45px rgba(0,0,0,0.12)' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ margin: 0 }}>タスク削除の確認</h3>
               </div>
-              {allTasks.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>タスクはありません</div>
-              ) : (
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {allTasks.map((task) => {
-                    const assignee = task.to ? users.find((user) => user.id === task.to) : null;
-                    return (
-                      <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '14px', border: '1px solid #e5e5e5', borderRadius: '8px' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 500 }}>{task.name}</div>
-                            <span style={{ fontSize: '11px', color: '#777' }}>{priorityBadge(task.pri)}</span>
-                            <span style={{ fontSize: '11px', color: '#777' }}>{statusBadge(task.st)}</span>
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>{task.desc || '詳細なし'}</div>
-                          <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
-                            担当: {assignee ? assignee.name : '未割当'} / XP +{task.xp}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                          {onEditTask ? (
-                            <button className="btn btn-sm" type="button" onClick={() => { onEditTask(task); setShowManageModal(false); }}>編集</button>
-                          ) : null}
-                          {onDeleteTask ? (
-                            <button className="btn btn-sm btn-danger" type="button" onClick={() => onDeleteTask(task.id)}>削除</button>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <div style={{ color: '#333', fontSize: '14px', lineHeight: 1.6 }}>
+                選択中の {selectedCount} 件のタスクを削除します。
+                この操作は元に戻せません。よろしいですか？
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                <button className="btn" type="button" onClick={() => setShowDeleteConfirm(false)}>キャンセル</button>
+                <button className="btn btn-danger" type="button" onClick={handleDeleteSelected}>削除</button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -284,7 +328,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
               <div className="task-board-column-list">
                 {poolTasks.length === 0 ? (
                   <div className="task-board-empty">ガチャプール内のタスクはありません</div>
-                ) : poolTasks.map((task) => renderTaskRow(task))}
+                ) : poolTasks.map((task) => renderTaskRow(task, true))}
               </div>
             </div>
             <div
@@ -299,7 +343,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
               <div className="task-board-column-list">
                 {nonPoolTasks.length === 0 ? (
                   <div className="task-board-empty">プール外のタスクはありません</div>
-                ) : nonPoolTasks.map((task) => renderTaskRow(task))}
+                ) : nonPoolTasks.map((task) => renderTaskRow(task, true))}
               </div>
             </div>
           </div>
@@ -312,12 +356,12 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
                   <div>{filteredTasks.filter((task) => task.st === status).length}</div>
                 </div>
                 <div className="task-board-column-list">
-                  {filteredTasks.filter((task) => task.st === status).map((task) => renderTaskRow(task))}
+                  {filteredTasks.filter((task) => task.st === status).map((task) => renderTaskRow(task, false))}
                 </div>
               </div>
             ))}
           </div>
-        ) : (
+        ) : tFilter === 'done' ? (
           <table className="tbl" id="ttbl">
             <thead>
               <tr>
@@ -335,17 +379,17 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
                 <tr><td colSpan={7} style={{ textAlign: 'center', color: '#aaa', padding: '2rem', fontSize: '13px' }}>タスクはありません</td></tr>
               ) : filteredTasks.map((task) => {
                 const assignee = task.to ? users.find((user) => user.id === task.to) : null;
-                const inPool = !!task.inPool;
+                const selected = selectedTaskIds.includes(task.id);
                 return (
                   <tr key={task.id}>
                     <td style={{ textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={inPool}
-                        onChange={(e) => {
-                          toggleTaskPool(task.id, e.target.checked);
-                        }}
-                      />
+                      {isAllTab ? (
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={(e) => toggleTaskSelection(task.id, e.target.checked)}
+                        />
+                      ) : null}
                     </td>
                     <td>
                       <div style={{ fontSize: '13px', fontWeight: 500 }}>{task.name}</div>
@@ -366,7 +410,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
               })}
             </tbody>
           </table>
-        )}
+        ) : null}
       </div>
     </div>
   );

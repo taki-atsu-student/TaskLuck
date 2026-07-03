@@ -575,7 +575,6 @@ export default function useAppController() {
   };
 
   const handleTaskDelete = async (id: number) => {
-    if (!window.confirm("本当に削除しますか？")) return;
     try {
       const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
         method: 'DELETE',
