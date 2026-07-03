@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, Notification, BusinessInfo, USERS_INITIAL, SHIFTS_INITIAL, SHIFT_PATTERNS_INITIAL, TASKS_INITIAL, BUSINESS_INFO_INITIAL, normalizeRole, resolveUserRole } from '../models';
+import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, Notification, BusinessInfo, BUSINESS_INFO_INITIAL, normalizeRole, resolveUserRole } from '../models';
 import { signIn, fetchAuthSession, signOut } from 'aws-amplify/auth';
 
 export default function useAppController() {
@@ -9,8 +9,8 @@ export default function useAppController() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [shiftPatternsMap, setShiftPatternsMap] = useState<Record<number, ShiftPattern[]>>({});
   const shiftPatterns = currentUser
-    ? (shiftPatternsMap[currentUser.id] ?? SHIFT_PATTERNS_INITIAL)
-    : SHIFT_PATTERNS_INITIAL;
+    ? (shiftPatternsMap[currentUser.id] ?? [])
+    : [];
 
   // データ取得用の補助関数
   const refreshTasks = async () => {
@@ -117,7 +117,7 @@ export default function useAppController() {
   const setShiftPatterns = async (action: React.SetStateAction<ShiftPattern[]>) => {
     if (!currentUser) return;
     const uid = currentUser.id;
-    const current = shiftPatternsMap[uid] ?? SHIFT_PATTERNS_INITIAL;
+    const current = shiftPatternsMap[uid] ?? [];
     const next = typeof action === 'function' ? action(current) : action;
 
     try {
@@ -154,7 +154,7 @@ export default function useAppController() {
   const [reqEnd, setReqEnd] = useState('17:00');
   const [reqOff, setReqOff] = useState(false);
   const [reqNote, setReqNote] = useState('');
-  const [csUid, setCsUid] = useState<number>(USERS_INITIAL[0]?.id ?? 1);
+  const [csUid, setCsUid] = useState<number>(1);
   const [csDate, setCsDate] = useState(new Date().toISOString().slice(0, 10));
   const [csStart, setCsStart] = useState('09:00');
   const [csEnd, setCsEnd] = useState('17:00');
