@@ -72,6 +72,7 @@ export default function App() {
     openTaskModal, handleTaskModalSubmit, editingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
     handleTaskTogglePool, handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
+    password, setPassword,
   } = controller;
 
 
@@ -164,6 +165,8 @@ export default function App() {
         <AuthView
           loginUserId={loginUserId}
           setLoginUserId={setLoginUserId}
+          password={password}   // 💡 追加
+          setPassword={setPassword} // 💡 追加
           handleLogin={handleLogin}
         />
       ) : (
