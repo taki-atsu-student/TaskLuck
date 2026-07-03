@@ -141,8 +141,8 @@ export default function useAppController() {
   const [gLog, setGLog] = useState<GachaLog[]>([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [cy, setCy] = useState(2025);
-  const [cm, setCm] = useState(5);
+  const [cy, setCy] = useState(() => new Date().getFullYear());
+  const [cm, setCm] = useState(() => new Date().getMonth());
   const [tFilter, setTFilter] = useState<TaskStatus | 'all' | 'progress'>('all');
   const [activePage, setActivePage] = useState<'dashboard' | 'shift' | 'shift-request' | 'shift-edit' | 'task' | 'gacha' | 'business-info' | 'staff' | 'notifications'>('dashboard');
   const [modal, setModal] = useState<string | null>(null);
@@ -371,20 +371,6 @@ export default function useAppController() {
     }
 
     return { monthNames, dayNames, cells };
-  };
-
-  const shiftTableRows = (shiftsParam: Shift[], usersParam: User[], currentUserParam: User | null, isMgrParam: boolean) => {
-    const list = isMgrParam
-      ? [...shiftsParam].sort((a, b) => a.date.localeCompare(b.date))
-      : shiftsParam.filter((shift) => shift.uid === currentUserParam?.id).sort((a, b) => a.date.localeCompare(b.date));
-
-    return list.map((shift) => {
-      const user = usersParam.find((item) => item.id === shift.uid) ?? { name: '?' };
-      const badge = shift.st === 'confirmed'
-        ? { label: '確定', cls: 'b b-green' }
-        : { label: '希望', cls: 'b b-orange' };
-      return { shift, user, badge };
-    });
   };
 
   const taskList = (tasksParam: Task[], currentUserParam: User | null, isMgrParam: boolean, isStfParam: boolean, tFilterParam: TaskStatus | 'all' | 'progress') => {
@@ -813,7 +799,7 @@ export default function useAppController() {
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
     toast, handleLogin, logout, handleNav, isMgr, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
-    renderCalendar, shiftTableRows, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
+    renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskTogglePool, handleTaskCreateSubmit,
     openTaskModal, handleTaskModalSubmit, editingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,

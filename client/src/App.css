@@ -27,6 +27,8 @@
 .sb-logo-icon{width:26px;height:26px;background:#1a1a1a;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
 .sb-logo-name{font-size:14px;font-weight:600;letter-spacing:-0.03em}
 .sb-user{background:#f5f5f7;border-radius:8px;padding:10px 10px;display:flex;align-items:center;gap:8px}
+.sb-user-clickable{cursor:pointer;transition:background .15s}
+.sb-user-clickable:hover{background:#e8e8ed}
 .sb-avatar{width:30px;height:30px;border-radius:50%;background:#e5e5e5;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#555;flex-shrink:0}
 .sb-uname{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-urole{font-size:11px;color:#888}
@@ -129,12 +131,13 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 .cal-cell.today{background:#f0f0f0}
 .cal-cell.closed{background:#dcf6e5}
 .cal-cell.closed:hover{background:#dcf6e5}
+.cal-cell.understaffed{background:#fff0f0;border:1px solid #fca5a5}
 .cal-cell.selected{background:#3b82f6;border:2px solid #1e40af}
 .cal-cell.other .cal-n{color:#ccc}
 .cal-n{font-size:11px;color:#aaa;margin-bottom:2px}
 .cal-cell.selected .cal-n{color:#fff}
 .cal-ev{font-size:10px;border-radius:3px;padding:1px 4px;margin-bottom:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cal-ev-me{background:#1a1a1a;color:#fff}
+.cal-ev-me{background:#dbeafe;color:#1e40af}
 .cal-ev-other{background:#f0f0f0;color:#555}
 
 /* XP */
@@ -316,8 +319,10 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 /* SHIFT EDIT - CALENDAR */
 .shift-edit-cal .cal-cell{cursor:pointer}
 .shift-edit-cal .cal-cell:hover{background:#f0f0f0}
-.shift-edit-cal .cal-cell.selected{background:#1a1a1a;border-color:#1a1a1a}
-.shift-edit-cal .cal-cell.selected .cal-n{color:#fff}
+.shift-edit-cal .cal-cell.understaffed{background:#fff0f0;border:1px solid #fca5a5}
+.shift-edit-cal .cal-cell.understaffed.selected{background:#fafafa;border:2px solid #2563eb}
+.shift-edit-cal .cal-cell.selected{background:#fafafa;border:2px solid #2563eb}
+.shift-edit-cal .cal-cell.selected .cal-n{color:#1a1a1a}
 .shift-edit-cal .cal-cell.day-red .cal-n{color:#e0506a}
 .shift-edit-cal .cal-cell.day-blue .cal-n{color:#4b9be0}
 .shift-edit-cal .cal-cell.closed{background:#dcf6e5;pointer-events:none}
@@ -339,10 +344,14 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 .gantt-staff{width:160px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:6px 0;padding-right:12px}
 .gantt-name{font-size:12px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gantt-role{font-size:10px;color:#aaa}
-.gantt-track{flex:1;position:relative;height:36px;background:repeating-linear-gradient(90deg,#f5f5f5 0,#f5f5f5 1px,transparent 1px,transparent 10%) center/10% 100%}
-.gantt-bar{position:absolute;top:4px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff;cursor:grab;user-select:none;min-width:24px;overflow:hidden;white-space:nowrap;transition:opacity .1s}
+.gantt-track{flex:1;position:relative;height:36px;background:repeating-linear-gradient(90deg,#f5f5f5 0,#f5f5f5 1px,transparent 1px,transparent 10%) center/10% 100%;overflow:visible}
+.gantt-bar{position:absolute;top:4px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff;cursor:grab;user-select:none;min-width:24px;overflow:visible;white-space:nowrap;transition:opacity .1s}
 .gantt-bar:active{cursor:grabbing;opacity:.85}
-.gantt-bar span{padding:0 20px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.gantt-bar.readonly{cursor:default}
+.gantt-bar.readonly:active{cursor:default;opacity:1}
+.gantt-bar span{padding:0 20px;overflow:hidden;text-overflow:ellipsis;pointer-events:none;flex:1;min-width:0}
+.gantt-bar-delete{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;background:#ff4d4f;border:2px solid #fff;color:#fff;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;padding:0;font-family:inherit;opacity:0;transition:opacity .15s;pointer-events:none}
+.gantt-bar:hover .gantt-bar-delete{opacity:1;pointer-events:auto}
 .gantt-handle{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize;z-index:2}
 .gantt-handle.left{left:0;border-radius:6px 0 0 6px}
 .gantt-handle.right{right:0;border-radius:0 6px 6px 0}

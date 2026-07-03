@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Shift, ShiftAssignment, User } from '../models';
+import { Shift, ShiftAssignment, User, BusinessInfo, BusinessDayKey } from '../models';
+import { ShiftGanttChart, START_MIN, END_MIN, TOTAL_MIN, STEP_MIN, toMin, toTime, roundStep } from '../components/ShiftGanttChart';
 
 type CalendarData = { monthNames: string[]; dayNames: string[]; cells: any[] } | null;
 
@@ -14,36 +15,19 @@ type ShiftEditViewProps = {
   todayIso: string;
   toast: (message: string) => void;
   onBack: () => void;
+  understaffedDates: Set<string>;
+  businessInfo: BusinessInfo;
 };
 
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
-const START_MIN = 6 * 60;
-const END_MIN = 24 * 60;
-const TOTAL_MIN = END_MIN - START_MIN;
-const STEP_MIN = 15;
-const COLORS = ['gantt-blue', 'gantt-green', 'gantt-orange', 'gantt-purple', 'gantt-red'];
 const ASSIGNMENT_LABELS: Record<ShiftAssignment, string> = { hall: 'ホール', kitchen: 'キッチン' };
-const TEMP_CLOSED_DAY = 2; // 仮設定：火曜日を定休日
+const DOW_TO_KEY: BusinessDayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const HOLIDAYS = new Set([
   '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24','2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06','2025-07-21','2025-08-11','2025-09-15','2025-09-23','2025-10-13','2025-11-03','2025-11-23','2025-11-24',
-  '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03','2026-11-23'
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03'
 ]);
 
-const toMin = (time: string) => {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
-};
-
-const toTime = (min: number) => {
-  const safe = Math.max(0, Math.min(24 * 60, min));
-  const h = Math.floor(safe / 60);
-  const m = safe % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-};
-
-const roundStep = (min: number) => Math.round(min / STEP_MIN) * STEP_MIN;
-
-export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack }: ShiftEditViewProps) {
+export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates, businessInfo }: ShiftEditViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editShifts, setEditShifts] = useState<Shift[]>(shifts);
@@ -54,6 +38,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
   const [memoText, setMemoText] = useState('');
   const [activeTab, setActiveTab] = useState<ShiftAssignment>('hall');
   const [addAssignments, setAddAssignments] = useState<ShiftAssignment[]>(['hall']);
+  const [deleteTarget, setDeleteTarget] = useState<Shift | null>(null);
 
   const displayUsers = useMemo(() => {
     const base = users.length ? users : [];
@@ -128,7 +113,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
       isSun: day === 0,
       isSat: day === 6,
       isHoliday: HOLIDAYS.has(dateKey),
-      isClosed: day === TEMP_CLOSED_DAY,
+      isClosed: businessInfo.regularClosedDays.includes(DOW_TO_KEY[day]),
     };
   };
 
@@ -189,6 +174,14 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
       if (prev.includes(assignment)) return prev.filter((item) => item !== assignment);
       return [...prev, assignment];
     });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    setEditShifts((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+    setDeleteTarget(null);
+    setIsDirty(true);
+    toast('シフトを削除しました');
   };
 
   const saveAll = () => {
@@ -288,7 +281,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
                 const flags = getCellFlags(cell.dateKey);
                 return (
                   <div
-                    className={`cal-cell edit-cell${cell.isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${flags.isSun || flags.isHoliday ? ' day-red' : ''}${flags.isSat ? ' day-blue' : ''}${flags.isClosed ? ' closed' : ''}`}
+                    className={`cal-cell edit-cell${cell.isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${flags.isSun || flags.isHoliday ? ' day-red' : ''}${flags.isSat ? ' day-blue' : ''}${!flags.isClosed && understaffedDates.has(cell.dateKey) ? ' understaffed' : ''}${flags.isClosed ? ' closed' : ''}`}
                     key={cell.dateKey}
                     onClick={() => setSelectedDate(cell.dateKey)}
                     onDoubleClick={(event) => { event.preventDefault(); event.stopPropagation(); openMemo(cell.dateKey); }}
@@ -313,48 +306,14 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
           </div>
           <button className="btn btn-dark" type="button" onClick={() => { setAddUid(visibleUsers[0]?.id ?? addUid); setAddAssignments([activeTab]); setAddOpen(true); }}>+ 追加</button>
         </div>
-        <div className="gantt-tabs">
-          <button className={`gantt-tab${activeTab === 'hall' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('hall')}>ホール</button>
-          <button className={`gantt-tab${activeTab === 'kitchen' ? ' active' : ''}`} type="button" onClick={() => setActiveTab('kitchen')}>キッチン</button>
-        </div>
-
-        <div className="gantt-wrap">
-          <div className="gantt-scale">
-            <div className="gantt-staff-space" />
-            <div className="gantt-time-grid">
-              {[6,8,10,12,14,16,18,20,22,24].map((hour) => <span key={hour}>{hour}:00</span>)}
-            </div>
-          </div>
-          {rowShifts.map(({ user, shifts: userShifts }, rowIndex) => {
-            return (
-              <div className="gantt-row" key={user.id}>
-                <div className="gantt-staff">
-                  <div className="sb-avatar">{user.ini ?? '?'}</div>
-                  <div>
-                    <div className="gantt-name">{user.name ?? '未設定'}</div>
-                    <div className="gantt-role">{activeTab === 'hall' ? 'ホール' : 'キッチン'}</div>
-                  </div>
-                </div>
-                <div className="gantt-track">
-                  {userShifts.map((shift, shiftIndex) => {
-                    const sMin = Math.max(START_MIN, toMin(shift.s));
-                    const eMin = Math.min(END_MIN, toMin(shift.e));
-                    const left = ((sMin - START_MIN) / TOTAL_MIN) * 100;
-                    const width = ((eMin - sMin) / TOTAL_MIN) * 100;
-                    return (
-                      <div className={`gantt-bar ${COLORS[(rowIndex + shiftIndex) % COLORS.length]}`} key={shift.id} style={{ left: `${left}%`, width: `${width}%` }} onMouseDown={(event) => startDrag(event, shift, 'move')}>
-                        <div className="gantt-handle left" onMouseDown={(event) => startDrag(event, shift, 'start')} />
-                        <span>{shift.s}-{shift.e}</span>
-                        <div className="gantt-handle right" onMouseDown={(event) => startDrag(event, shift, 'end')} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-          {selectedTabShifts.length === 0 ? <div className="empty-gantt">この日のシフトはありません。「追加」または「シフト自動作成」で作成してください。</div> : null}
-        </div>
+        <ShiftGanttChart
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          rowShifts={rowShifts}
+          onBarMouseDown={startDrag}
+          onBarDeleteRequest={(shift) => setDeleteTarget(shift)}
+          emptyMessage="この日のシフトはありません。「追加」または「シフト自動作成」で作成してください。"
+        />
       </div>
 
       <div className={`overlay ${addOpen ? 'open' : ''}`} onClick={(event) => { if (event.target === event.currentTarget) setAddOpen(false); }}>
@@ -390,6 +349,19 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
           <div className="mf">
             <button className="btn" type="button" onClick={() => setMemoOpen(false)}>キャンセル</button>
             <button className="btn btn-dark" type="button" onClick={saveMemo}>保存</button>
+          </div>
+        </div>
+      </div>
+
+      <div className={`overlay ${deleteTarget ? 'open' : ''}`} onClick={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}>
+        <div className="modal">
+          <h3>シフトを削除</h3>
+          <p style={{ fontSize: '13px', color: '#555', margin: '8px 0 16px' }}>
+            {deleteTarget ? `${deleteTarget.s}〜${deleteTarget.e} のシフトを削除しますか？` : ''}
+          </p>
+          <div className="mf">
+            <button className="btn" type="button" onClick={() => setDeleteTarget(null)}>キャンセル</button>
+            <button className="btn btn-danger" type="button" onClick={confirmDelete}>削除</button>
           </div>
         </div>
       </div>
