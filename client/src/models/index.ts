@@ -1,4 +1,37 @@
 export type Role = 'manager' | 'staff' | 'part';
+
+export const normalizeRole = (role?: string | null): Role => {
+  const normalized = String(role ?? '').trim().toLowerCase();
+  if (normalized === 'manager' || normalized === 'staff' || normalized === 'part') {
+    return normalized;
+  }
+
+  if (normalized === 'admin') {
+    return 'manager';
+  }
+
+  return 'staff';
+};
+
+export const resolveUserRole = (user: { role?: string | null; hourlyWage?: number | null; monthlySalary?: number | null }): Role => {
+  const normalized = normalizeRole(user.role);
+  if (normalized === 'manager') {
+    return normalized;
+  }
+
+  const hourlyWage = Number(user.hourlyWage ?? 0);
+  const monthlySalary = Number(user.monthlySalary ?? 0);
+
+  if (hourlyWage > 0 && monthlySalary <= 0) {
+    return 'part';
+  }
+
+  if (monthlySalary > 0 && hourlyWage <= 0) {
+    return 'staff';
+  }
+
+  return normalized === 'part' ? 'part' : 'staff';
+};
 export type ShiftStatus = 'confirmed' | 'request';
 export type ShiftAssignment = 'hall' | 'kitchen';
 export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'done';

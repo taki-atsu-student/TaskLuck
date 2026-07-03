@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, Notification, BusinessInfo, USERS_INITIAL, SHIFTS_INITIAL, SHIFT_PATTERNS_INITIAL, TASKS_INITIAL, BUSINESS_INFO_INITIAL } from '../models';
+import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, Notification, BusinessInfo, USERS_INITIAL, SHIFTS_INITIAL, SHIFT_PATTERNS_INITIAL, TASKS_INITIAL, BUSINESS_INFO_INITIAL, normalizeRole, resolveUserRole } from '../models';
 import { signIn, fetchAuthSession, signOut } from 'aws-amplify/auth';
 
 export default function useAppController() {
@@ -30,7 +30,7 @@ export default function useAppController() {
       const res = await fetch('http://localhost:5001/api/users');
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) setUsers(data);
+        if (Array.isArray(data)) setUsers(data.map((user) => ({ ...user, role: resolveUserRole(user) })));
       }
     } catch (e) {
       console.error('Failed to fetch users:', e);
@@ -166,8 +166,10 @@ export default function useAppController() {
   const [asName, setAsName] = useState('');
   const [asRole, setAsRole] = useState<Role>('part');
   const [asSalary, setAsSalary] = useState<number>(1050);
-  const isMgr = currentUser?.role === 'manager';
-  const isStf = currentUser && (currentUser.role === 'manager' || currentUser.role === 'staff');
+  const normalizedRole = normalizeRole(currentUser?.role);
+  const isMgr = normalizedRole === 'manager';
+  const isLeadership = normalizedRole === 'manager';
+  const isStf = currentUser && (normalizedRole === 'manager' || normalizedRole === 'staff');
   const [password, setPassword] = useState<string>('');
 
   useEffect(() => {
@@ -188,7 +190,7 @@ export default function useAppController() {
     setToastText(message);
   };
 
-  const unreadCount = notifications.filter((item: Notification) => !item.read && (currentUser?.role === 'manager' ? true : item.uid === currentUser?.id)).length;
+  const unreadCount = notifications.filter((item: Notification) => !item.read && (isLeadership ? true : item.uid === currentUser?.id)).length;
   const toggleNotif = () => setNotificationOpen((prev: boolean) => !prev);
 
   const readNotif = async (id: number) => {
@@ -204,12 +206,12 @@ export default function useAppController() {
 
   const clearNotifs = async () => {
     if (!currentUser) return;
-    const toClear = notifications.filter((item) => !item.read && (currentUser.role === 'manager' || item.uid === currentUser.id));
+    const toClear = notifications.filter((item) => !item.read && (isLeadership || item.uid === currentUser.id));
     try {
       for (const item of toClear) {
         await fetch(`http://localhost:5001/api/notifications/${item.id}/read`, { method: 'PUT' });
       }
-      setNotifications((prev: Notification[]) => prev.map((item: Notification) => currentUser.role === 'manager' || item.uid === currentUser.id ? { ...item, read: true } : item));
+      setNotifications((prev: Notification[]) => prev.map((item: Notification) => isLeadership || item.uid === currentUser.id ? { ...item, read: true } : item));
     } catch (e) {
       console.error(e);
     }
@@ -300,16 +302,17 @@ export default function useAppController() {
 
         const selectedUser = users.find(
           (user) => String(user.username) === String(normalizedUsername)
-        ) ?? null;
+        );
+        const normalizedSelectedUser = selectedUser ? { ...selectedUser, role: resolveUserRole(selectedUser) } : null;
 
-        if (!selectedUser) {
+        if (!normalizedSelectedUser) {
           toast('Cognito認証は成功しましたが、DBにアカウントが存在しません');
           return;
         }
 
-        setCurrentUser(selectedUser);
+        setCurrentUser(normalizedSelectedUser);
         setActivePage('dashboard');
-        toast(`${selectedUser.name}としてログインしました！`);
+        toast(`${normalizedSelectedUser.name}としてログインしました！`);
       }
     } catch (error: any) {
       console.error('ログインエラー:', error);
@@ -332,7 +335,7 @@ export default function useAppController() {
   };
 
   const handleNav = (page: typeof activePage) => {
-    if (page === 'task' && currentUser?.role === 'part') return;
+    if (page === 'task' && normalizedRole === 'part') return;
     setActivePage(page);
   };
 
@@ -350,10 +353,10 @@ export default function useAppController() {
     { id: 'notifications', lbl: '通知', ic: 'bell' },
   ].filter((item) => {
     if (item.mgrOnly && !isMgr) return false;
-    if (item.partOnly && currentUser?.role !== 'part') return false;
-    if (item.id === 'task' && currentUser?.role === 'part') return false;
+    if (item.partOnly && normalizedRole !== 'part') return false;
+    if (item.id === 'task' && normalizedRole === 'part') return false;
     return true;
-  }), [currentUser, isMgr]);
+  }), [normalizedRole, isMgr]);
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -822,8 +825,8 @@ export default function useAppController() {
 
   const staffStats = (usersParam: User[]) => {
     const total = usersParam.length;
-    const partCount = usersParam.filter((user) => user.role === 'part').length;
-    const staffCount = total - partCount;
+    const partCount = usersParam.filter((user) => resolveUserRole(user) === 'part').length;
+    const staffCount = usersParam.filter((user) => resolveUserRole(user) !== 'part').length;
     return { total, partCount, staffCount };
   };
 
@@ -837,7 +840,7 @@ export default function useAppController() {
     csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd,
     ctName, setCtName, ctDesc, setCtDesc, ctPri, setCtPri, ctXp, setCtXp,
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
-    toast, handleLogin, logout, handleNav, isMgr, isStf,
+    toast, handleLogin, logout, handleNav, isMgr, isLeadership, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
     renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskTogglePool, handleTaskCreateSubmit,
