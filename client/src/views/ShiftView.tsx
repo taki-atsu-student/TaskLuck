@@ -5,6 +5,7 @@ import { ShiftGanttChart, toMin } from '../components/ShiftGanttChart';
 type ShiftViewProps = {
   isActive: boolean;
   isMgr: boolean;
+  isStf: boolean;
   onOpenShiftRequest: () => void;
   onOpenShiftCreate: () => void;
   cal: { monthNames: string[]; dayNames: string[]; cells: any[] } | null;
@@ -32,7 +33,7 @@ type ShiftViewProps = {
 const DOW_TO_KEY: BusinessDayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
-export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo, understaffedDates }: ShiftViewProps) {
+export function ShiftView({ isActive, isMgr, isStf, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo, understaffedDates }: ShiftViewProps) {
   const [activeTab, setActiveTab] = useState<ShiftAssignment>('hall');
 
   const displayUsers = useMemo(() => {
@@ -96,7 +97,7 @@ export function ShiftView({ isActive, isMgr, onOpenShiftRequest, onOpenShiftCrea
         <div><div className="pt">シフト管理</div></div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
           <button className="btn" type="button" onClick={onOpenShiftRequest}>+ 希望を提出</button>
-          {isMgr ? <button className="btn btn-dark" id="btn-cs" type="button" onClick={onOpenShiftCreate}>{'+ シフト作成'}</button> : null}
+          {isMgr || isStf ? <button className="btn btn-dark" id="btn-cs" type="button" onClick={onOpenShiftCreate}>{'+ シフト作成'}</button> : null}
         </div>
       </div>
       <div className="card" style={{ marginBottom: '12px' }}>
