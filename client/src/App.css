@@ -116,6 +116,13 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 .overlay.open{display:flex}
 .modal{background:#fff;border:1px solid #e5e5e5;border-radius:12px;padding:24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto}
 .modal h3{font-size:15px;font-weight:600;margin-bottom:18px;letter-spacing:-0.02em}
+.pdf-modal{max-width:1120px;overflow:hidden}
+.pdf-preview{max-height:65vh;overflow:auto;margin-bottom:18px;padding-right:8px}
+.pdf-table{width:max-content;border-collapse:collapse;font-size:11px}
+.pdf-table th,.pdf-table td{border:1px solid #e5e5e5;padding:6px 8px;white-space:nowrap;text-align:center}
+.pdf-table th{background:#f8fafc;position:sticky;top:0;z-index:1}
+.pdf-table td:first-child,.pdf-table th:first-child{position:sticky;left:0;z-index:2;background:#fff;text-align:left}
+.pdf-table td:first-child{font-weight:600}
 .mfg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .mfg label{font-size:11px;color:#888}
 .mfg input,.mfg select,.mfg textarea{border:1px solid #e5e5e5;border-radius:7px;padding:8px 11px;font-size:13px;color:#1a1a1a;background:#fff;outline:none;font-family:inherit;transition:border .15s}
