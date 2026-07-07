@@ -6,7 +6,7 @@ import { AuthView, DashboardView, ShiftView, TaskView, GachaView, BusinessInfoVi
 import { computeUnderstaffedDates } from './utils/shiftStaffing';
 import ShiftRequestScreen from './views/ShiftRequestScreen';
 import ShiftEditView from './views/ShiftEditView';
-import { API_BASE_URL } from './config/api';
+import { updateUserPassword } from './services/api';
 
 const ROLE_LABELS: Record<Role, string> = {
   manager: '店長',
@@ -89,21 +89,13 @@ export default function App() {
   const handlePwSave = async () => {
     if (!currentUser) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/users/${currentUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pwValue }),
-      });
-      if (res.ok) {
-        setUsers((prev) => prev.map((u) => u.id === currentUser.id ? { ...u, password: pwValue } : u));
-        setCurrentUser({ ...currentUser, password: pwValue });
-        setPwOpen(false);
-        toast('パスワードを変更しました');
-      } else {
-        toast('パスワード変更に失敗しました');
-      }
+      await updateUserPassword(currentUser.id, pwValue);
+      setUsers((prev) => prev.map((u) => u.id === currentUser.id ? { ...u, password: pwValue } : u));
+      setCurrentUser({ ...currentUser, password: pwValue });
+      setPwOpen(false);
+      toast('パスワードを変更しました');
     } catch {
-      toast('通信エラーが発生しました');
+      toast('パスワード変更に失敗しました');
     }
   };
 
