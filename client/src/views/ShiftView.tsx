@@ -146,24 +146,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   };
 
   const displayUsers = useMemo(() => {
-    const base = users.length ? users : [];
-    const fallback: User[] = [
-      { id: 9001, username: 'yamada_kenta', name: '山田 健太', role: 'part', xp: 0, ini: '山', password: '' },
-      { id: 9002, username: 'sato_hanako', name: '佐藤 花子', role: 'staff', xp: 0, ini: '佐', password: '' },
-      { id: 9003, username: 'tanaka_sho', name: '田中 翔', role: 'part', xp: 0, ini: '田', password: '' },
-      { id: 9004, username: 'nakamura_ao', name: '中村 葵', role: 'part', xp: 0, ini: '中', password: '' },
-      { id: 9005, username: 'ito_yu', name: '伊藤 優', role: 'part', xp: 0, ini: '伊', password: '' },
-      { id: 9006, username: 'kobayashi_taku', name: '小林 拓', role: 'staff', xp: 0, ini: '小', password: '' },
-      { id: 9007, username: 'kato_misaki', name: '加藤 美咲', role: 'part', xp: 0, ini: '加', password: '' },
-      { id: 9008, username: 'watanabe_ren', name: '渡辺 蓮', role: 'part', xp: 0, ini: '渡', password: '' },
-      { id: 9009, username: 'matsumoto_yui', name: '松本 結衣', role: 'part', xp: 0, ini: '松', password: '' },
-      { id: 9010, username: 'inoue_yota', name: '井上 陽太', role: 'part', xp: 0, ini: '井', password: '' },
-    ];
-    const merged = [...base];
-    fallback.forEach((user) => {
-      if (merged.length < 10 && !merged.some((item) => item.name === user.name)) merged.push(user);
-    });
-    return merged.slice(0, 10);
+    return users;
   }, [users]);
 
   const tabUsers = useMemo((): Record<ShiftAssignment, User[]> => ({

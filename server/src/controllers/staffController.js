@@ -3,6 +3,19 @@ import { CognitoIdentityProviderClient, AdminCreateUserCommand } from "@aws-sdk/
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: "ap-northeast-1" });
 
+const normalizeRole = (role) => {
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'manager' || value === 'staff' || value === 'part') return value;
+  if (value === 'admin') return 'manager';
+  return 'staff';
+};
+
+const toDbRole = (role) => {
+  const value = normalizeRole(role);
+  if (value === 'manager') return 'MANAGER';
+  return 'STAFF';
+};
+
 // 🎯 1. スタッフ一覧取得 (GET /api/staff)
 export const getStaffList = async (req, res) => {
   try {
@@ -14,7 +27,7 @@ export const getStaffList = async (req, res) => {
       id: Number(u.id), 
       username: u.username || `user${u.id}`, 
       name: u.name || "",
-      role: (u.role || "STAFF").toLowerCase() === 'manager' ? 'manager' : 'part', // フロントの型 (manager/part/staff) に丸める
+      role: normalizeRole(u.role),
       xp: parseInt(u.current_xp, 10) || 0, // 完全版のフィールド「current_xp」に合わせる
       ini: u.ini || (u.name ? u.name.charAt(0) : "S"),
       password: u.password || ""
@@ -52,7 +65,7 @@ export const createStaff = async (req, res) => {
           Username: username,
           TemporaryPassword: password,
           UserAttributes: [
-            { Name: "custom:role", Value: role || "part" }
+            { Name: "custom:role", Value: normalizeRole(role) }
           ],
           MessageAction: "SUPPRESS"
         };
@@ -71,7 +84,7 @@ export const createStaff = async (req, res) => {
       name: name.trim(),
       email: `${role || 'part'}_${newId}@example.com`,
       password: password,
-      role: role === 'manager' ? 'MANAGER' : 'STAFF', // DB側は大文字統一
+      role: toDbRole(role), // DB側は大文字統一
       level: 1,
       current_xp: 0,
       next_level_xp: 100,
@@ -89,7 +102,7 @@ export const createStaff = async (req, res) => {
       id: newId,
       username: username,
       name: userData.name,
-      role: role || 'part',
+      role: normalizeRole(role),
       xp: 0,
       ini: userData.ini,
       password: userData.password

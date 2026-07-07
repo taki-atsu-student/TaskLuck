@@ -26,6 +26,11 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
+app.use(async(req, res, next) => {
+  await initDatabase();
+  next();
+});
+
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/shifts', shiftsRoutes);

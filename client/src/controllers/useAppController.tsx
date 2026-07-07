@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, Notification, BusinessInfo, USERS_INITIAL, SHIFTS_INITIAL, SHIFT_PATTERNS_INITIAL, TASKS_INITIAL, BUSINESS_INFO_INITIAL } from '../models';
+import { Role, Priority, TaskStatus, User, Shift, ShiftPattern, Task, GachaLog, Notification, BusinessInfo, BUSINESS_INFO_INITIAL, normalizeRole, resolveUserRole } from '../models';
 import { signIn, fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { API_BASE_URL } from '../config/api';
 
 export default function useAppController() {
   const [loginUserId, setLoginUserId] = useState<string>('');
@@ -9,13 +10,13 @@ export default function useAppController() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [shiftPatternsMap, setShiftPatternsMap] = useState<Record<number, ShiftPattern[]>>({});
   const shiftPatterns = currentUser
-    ? (shiftPatternsMap[currentUser.id] ?? SHIFT_PATTERNS_INITIAL)
-    : SHIFT_PATTERNS_INITIAL;
+    ? (shiftPatternsMap[currentUser.id] ?? [])
+    : [];
 
   // データ取得用の補助関数
   const refreshTasks = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/tasks');
+      const res = await fetch(`${API_BASE_URL}/api/tasks`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setTasks(data);
@@ -27,10 +28,10 @@ export default function useAppController() {
 
   const refreshUsers = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/users');
+      const res = await fetch(`${API_BASE_URL}/api/users`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) setUsers(data);
+        if (Array.isArray(data)) setUsers(data.map((user) => ({ ...user, role: resolveUserRole(user) })));
       }
     } catch (e) {
       console.error('Failed to fetch users:', e);
@@ -39,7 +40,7 @@ export default function useAppController() {
 
   const refreshShifts = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/shifts');
+      const res = await fetch(`${API_BASE_URL}/api/shifts`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setShifts(data);
@@ -51,7 +52,7 @@ export default function useAppController() {
 
   const refreshBusinessInfo = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/business-info');
+      const res = await fetch(`${API_BASE_URL}/api/business-info`);
       if (res.ok) {
         const data = await res.json();
         setBusinessInfo(data);
@@ -63,7 +64,7 @@ export default function useAppController() {
 
   const refreshNotifications = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/notifications');
+      const res = await fetch(`${API_BASE_URL}/api/notifications`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setNotifications(data);
@@ -75,7 +76,7 @@ export default function useAppController() {
 
   const refreshGachaHistory = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/gacha/history');
+      const res = await fetch(`${API_BASE_URL}/api/gacha/history`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) setGLog(data);
@@ -100,7 +101,7 @@ export default function useAppController() {
     if (!currentUser) return;
     const fetchShiftPatterns = async () => {
       try {
-        const res = await fetch(`http://localhost:5001/api/shift-patterns?uid=${currentUser.id}`);
+        const res = await fetch(`${API_BASE_URL}/api/shift-patterns?uid=${currentUser.id}`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -117,11 +118,11 @@ export default function useAppController() {
   const setShiftPatterns = async (action: React.SetStateAction<ShiftPattern[]>) => {
     if (!currentUser) return;
     const uid = currentUser.id;
-    const current = shiftPatternsMap[uid] ?? SHIFT_PATTERNS_INITIAL;
+    const current = shiftPatternsMap[uid] ?? [];
     const next = typeof action === 'function' ? action(current) : action;
 
     try {
-      const res = await fetch('http://localhost:5001/api/shift-patterns', {
+      const res = await fetch(`${API_BASE_URL}/api/shift-patterns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, patterns: next }),
@@ -154,7 +155,7 @@ export default function useAppController() {
   const [reqEnd, setReqEnd] = useState('17:00');
   const [reqOff, setReqOff] = useState(false);
   const [reqNote, setReqNote] = useState('');
-  const [csUid, setCsUid] = useState<number>(USERS_INITIAL[0]?.id ?? 1);
+  const [csUid, setCsUid] = useState<number>(1);
   const [csDate, setCsDate] = useState(new Date().toISOString().slice(0, 10));
   const [csStart, setCsStart] = useState('09:00');
   const [csEnd, setCsEnd] = useState('17:00');
@@ -166,8 +167,10 @@ export default function useAppController() {
   const [asName, setAsName] = useState('');
   const [asRole, setAsRole] = useState<Role>('part');
   const [asSalary, setAsSalary] = useState<number>(1050);
-  const isMgr = currentUser?.role === 'manager';
-  const isStf = currentUser && (currentUser.role === 'manager' || currentUser.role === 'staff');
+  const normalizedRole = normalizeRole(currentUser?.role);
+  const isMgr = normalizedRole === 'manager';
+  const isLeadership = normalizedRole === 'manager';
+  const isStf = currentUser && (normalizedRole === 'manager' || normalizedRole === 'staff');
   const [password, setPassword] = useState<string>('');
 
   useEffect(() => {
@@ -188,12 +191,12 @@ export default function useAppController() {
     setToastText(message);
   };
 
-  const unreadCount = notifications.filter((item: Notification) => !item.read && (currentUser?.role === 'manager' ? true : item.uid === currentUser?.id)).length;
+  const unreadCount = notifications.filter((item: Notification) => !item.read && (isLeadership ? true : item.uid === currentUser?.id)).length;
   const toggleNotif = () => setNotificationOpen((prev: boolean) => !prev);
 
   const readNotif = async (id: number) => {
     try {
-      const res = await fetch(`http://localhost:5001/api/notifications/${id}/read`, { method: 'PUT' });
+      const res = await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, { method: 'PUT' });
       if (res.ok) {
         setNotifications((prev: Notification[]) => prev.map((item: Notification) => item.id === id ? { ...item, read: true } : item));
       }
@@ -204,12 +207,12 @@ export default function useAppController() {
 
   const clearNotifs = async () => {
     if (!currentUser) return;
-    const toClear = notifications.filter((item) => !item.read && (currentUser.role === 'manager' || item.uid === currentUser.id));
+    const toClear = notifications.filter((item) => !item.read && (isLeadership || item.uid === currentUser.id));
     try {
       for (const item of toClear) {
-        await fetch(`http://localhost:5001/api/notifications/${item.id}/read`, { method: 'PUT' });
+        await fetch(`${API_BASE_URL}/api/notifications/${item.id}/read`, { method: 'PUT' });
       }
-      setNotifications((prev: Notification[]) => prev.map((item: Notification) => currentUser.role === 'manager' || item.uid === currentUser.id ? { ...item, read: true } : item));
+      setNotifications((prev: Notification[]) => prev.map((item: Notification) => isLeadership || item.uid === currentUser.id ? { ...item, read: true } : item));
     } catch (e) {
       console.error(e);
     }
@@ -223,7 +226,7 @@ export default function useAppController() {
     const matchingNotifs = notifications.filter((item) => item.taskId === taskId && item.title === 'タスク完了報があります');
     try {
       for (const item of matchingNotifs) {
-        await fetch(`http://localhost:5001/api/notifications/${item.id}`, { method: 'DELETE' });
+        await fetch(`${API_BASE_URL}/api/notifications/${item.id}`, { method: 'DELETE' });
       }
     } catch (e) {
       console.error(e);
@@ -245,7 +248,7 @@ export default function useAppController() {
 
   const addNotification = async (title: string, sub: string, uid: number, taskId?: number) => {
     try {
-      const res = await fetch('http://localhost:5001/api/notifications', {
+      const res = await fetch(`${API_BASE_URL}/api/notifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, sub, uid, taskId }),
@@ -300,16 +303,17 @@ export default function useAppController() {
 
         const selectedUser = users.find(
           (user) => String(user.username) === String(normalizedUsername)
-        ) ?? null;
+        );
+        const normalizedSelectedUser = selectedUser ? { ...selectedUser, role: resolveUserRole(selectedUser) } : null;
 
-        if (!selectedUser) {
+        if (!normalizedSelectedUser) {
           toast('Cognito認証は成功しましたが、DBにアカウントが存在しません');
           return;
         }
 
-        setCurrentUser(selectedUser);
+        setCurrentUser(normalizedSelectedUser);
         setActivePage('dashboard');
-        toast(`${selectedUser.name}としてログインしました！`);
+        toast(`${normalizedSelectedUser.name}としてログインしました！`);
       }
     } catch (error: any) {
       console.error('ログインエラー:', error);
@@ -332,7 +336,7 @@ export default function useAppController() {
   };
 
   const handleNav = (page: typeof activePage) => {
-    if (page === 'task' && currentUser?.role === 'part') return;
+    if (page === 'task' && normalizedRole === 'part') return;
     setActivePage(page);
   };
 
@@ -350,10 +354,10 @@ export default function useAppController() {
     { id: 'notifications', lbl: '通知', ic: 'bell' },
   ].filter((item) => {
     if (item.mgrOnly && !isMgr) return false;
-    if (item.partOnly && currentUser?.role !== 'part') return false;
-    if (item.id === 'task' && currentUser?.role === 'part') return false;
+    if (item.partOnly && normalizedRole !== 'part') return false;
+    if (item.id === 'task' && normalizedRole === 'part') return false;
     return true;
-  }), [currentUser, isMgr]);
+  }), [normalizedRole, isMgr]);
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -425,7 +429,7 @@ export default function useAppController() {
     if (!date || !s || !e) { toastFn('日付と時間を入力してください'); return; }
     if (!currentUserParam) return;
     try {
-      const res = await fetch('http://localhost:5001/api/shifts', {
+      const res = await fetch(`${API_BASE_URL}/api/shifts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -462,7 +466,7 @@ export default function useAppController() {
       .filter(Boolean);
 
     try {
-      const res = await fetch('http://localhost:5001/api/shifts/bulk', {
+      const res = await fetch(`${API_BASE_URL}/api/shifts/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -487,7 +491,7 @@ export default function useAppController() {
   const handleShiftCreateSubmit = async (csUidParam: number, csDateParam: string, csStartParam: string, csEndParam: string, setShiftsFn: (fn: any) => void, setModalFn: (m: any) => void, toastFn: (m: string) => void) => {
     if (!csDateParam || !csStartParam || !csEndParam) { toastFn('入力を確認してください'); return; }
     try {
-      const res = await fetch('http://localhost:5001/api/shifts', {
+      const res = await fetch(`${API_BASE_URL}/api/shifts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -534,7 +538,7 @@ export default function useAppController() {
   const handleTaskStart = async (id: number, setTasksFn: (fn: any) => void, toastFn: (m: string) => void) => {
     if (!currentUser) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ st: 'in_progress', to: currentUser.id }),
@@ -553,7 +557,7 @@ export default function useAppController() {
 
   const handleRequestDone = async (id: number, setTasksFn: (fn: any) => void, toastFn: (m: string) => void) => {
     try {
-      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ st: 'review' }),
@@ -577,7 +581,7 @@ export default function useAppController() {
   const handleTaskDelete = async (id: number) => {
     if (!window.confirm("本当に削除しますか？")) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -594,7 +598,7 @@ export default function useAppController() {
 
   const handleTaskTogglePool = async (id: number, inPool: boolean) => {
     try {
-      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inPool }),
@@ -611,7 +615,7 @@ export default function useAppController() {
     if (!ctNameParam.trim()) { toastFn('タスク名を入力してください'); return; }
     if (!currentUserParam) return;
     try {
-      const res = await fetch('http://localhost:5001/api/tasks', {
+      const res = await fetch(`${API_BASE_URL}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -655,17 +659,17 @@ export default function useAppController() {
     const payload = { name: ctName.trim(), desc: ctDesc.trim(), pri: ctPri, xp: ctXp };
     try {
       if (editingTaskId === null) {
-        const res = await fetch('http://localhost:5001/api/tasks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, inPool: true }) });
+        const res = await fetch(`${API_BASE_URL}/api/tasks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, inPool: true }) });
         if (!res.ok) throw new Error('タスク追加失敗');
         toast('タスクを追加しました');
       } else {
-        const res = await fetch(`http://localhost:5001/api/tasks/${editingTaskId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const res = await fetch(`${API_BASE_URL}/api/tasks/${editingTaskId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (!res.ok) throw new Error('タスク更新失敗');
         toast('タスクを更新しました');
       }
       setModal(null);
       setEditingTaskId(null);
-      const fetchRes = await fetch('http://localhost:5001/api/tasks');
+      const fetchRes = await fetch(`${API_BASE_URL}/api/tasks`);
       const tasksArray = await fetchRes.json();
       if (Array.isArray(tasksArray)) setTasks(tasksArray);
     } catch (err) {
@@ -687,14 +691,14 @@ export default function useAppController() {
     if (!currentUserParam) return;
     setGachaLockFn(true);
     try {
-      const res = await fetch('http://localhost:5001/api/gacha/pull', {
+      const res = await fetch(`${API_BASE_URL}/api/gacha/pull`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ availableTasks: avail }),
       });
       if (res.ok) {
         const data = await res.json();
-        await fetch(`http://localhost:5001/api/tasks/${data.task.id}`, {
+        await fetch(`${API_BASE_URL}/api/tasks/${data.task.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ st: 'in_progress', to: currentUserParam.id }),
@@ -719,7 +723,7 @@ export default function useAppController() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:5001/api/tasks/${currentTask.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${currentTask.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ st: 'review' }),
@@ -741,7 +745,7 @@ export default function useAppController() {
     const task = tasksParam.find((item) => item.id === id);
     if (!task) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/tasks/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ st: approved ? 'done' : 'in_progress' }),
@@ -751,7 +755,7 @@ export default function useAppController() {
           const user = users.find((u) => u.id === task.to);
           if (user) {
             const newXp = user.xp + task.xp;
-            await fetch(`http://localhost:5001/api/users/${task.to}`, {
+            await fetch(`${API_BASE_URL}/api/users/${task.to}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ xp: newXp }),
@@ -780,7 +784,7 @@ export default function useAppController() {
       : { monthlySalary: asSalaryParam };
 
     try {
-      const res = await fetch('http://localhost:5001/api/users', {
+      const res = await fetch(`${API_BASE_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -804,7 +808,7 @@ export default function useAppController() {
 
   const handleSaveBusinessInfo = async () => {
     try {
-      const res = await fetch('http://localhost:5001/api/business-info', {
+      const res = await fetch(`${API_BASE_URL}/api/business-info`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(businessInfo),
@@ -822,8 +826,8 @@ export default function useAppController() {
 
   const staffStats = (usersParam: User[]) => {
     const total = usersParam.length;
-    const partCount = usersParam.filter((user) => user.role === 'part').length;
-    const staffCount = total - partCount;
+    const partCount = usersParam.filter((user) => resolveUserRole(user) === 'part').length;
+    const staffCount = usersParam.filter((user) => resolveUserRole(user) !== 'part').length;
     return { total, partCount, staffCount };
   };
 
@@ -837,7 +841,7 @@ export default function useAppController() {
     csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd,
     ctName, setCtName, ctDesc, setCtDesc, ctPri, setCtPri, ctXp, setCtXp,
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
-    toast, handleLogin, logout, handleNav, isMgr, isStf,
+    toast, handleLogin, logout, handleNav, isMgr, isLeadership, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
     renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskTogglePool, handleTaskCreateSubmit,
