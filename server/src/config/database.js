@@ -15,8 +15,10 @@ export const connectDatabase = async () => {
 };
 
 export const getDb = () => {
-  if (!mongoose.connection.db) {
+  // connection.client が存在するかチェック
+  if (!mongoose.connection.client) {
     throw new Error("データベースがまだ初期化されていません。");
   }
-  return mongoose.connection.db;
+  // client.db() から安全に生のDBオブジェクトを取得する
+  return mongoose.connection.client.db();
 };

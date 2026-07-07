@@ -6,6 +6,7 @@ import { AuthView, DashboardView, ShiftView, TaskView, GachaView, BusinessInfoVi
 import { computeUnderstaffedDates } from './utils/shiftStaffing';
 import ShiftRequestScreen from './views/ShiftRequestScreen';
 import ShiftEditView from './views/ShiftEditView';
+import { API_BASE_URL } from './config/api';
 
 const ROLE_LABELS: Record<Role, string> = {
   manager: '店長',
@@ -88,7 +89,7 @@ export default function App() {
   const handlePwSave = async () => {
     if (!currentUser) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/users/${currentUser.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/users/${currentUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pwValue }),

@@ -1,5 +1,6 @@
 import express from 'express';
 import mongoose from 'mongoose';
+import { getDb } from '../config/database.js';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ const toDbRole = (role) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const db = mongoose.connection.db;
+    const db = getDb();
     const users = await db.collection('users').find().toArray();
     
     const formattedUsers = users.map(u => ({
