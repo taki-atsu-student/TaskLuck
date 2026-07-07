@@ -1,5 +1,5 @@
 ﻿import { type ReactNode, useState } from 'react';
-import { Priority, TaskStatus, User, Shift, Task } from '../models';
+import { Priority, TaskStatus, User, Shift, Task, resolveUserRole } from '../models';
 
 type DashboardViewProps = {
   isActive: boolean;
@@ -38,7 +38,7 @@ export function DashboardView({ isActive, isMgr, currentUser, dsObj, tasks, toda
 
   const getRankingData = (tab: 'xp' | 'completed') => {
     // アルバイト（part）ユーザーのみでランキングを作成
-    const partUsers = users.filter((user) => user.role === 'part');
+    const partUsers = users.filter((user) => resolveUserRole(user) === 'part');
     const ranking = partUsers.map((user) => {
       const completedTasks = tasks.filter((t) => t.to === user.id && t.st === 'done').length;
       return {
