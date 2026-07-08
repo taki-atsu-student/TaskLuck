@@ -6,6 +6,7 @@ import { AuthView, DashboardView, ShiftView, TaskView, GachaView, BusinessInfoVi
 import { computeUnderstaffedDates } from './utils/shiftStaffing';
 import ShiftRequestScreen from './views/ShiftRequestScreen';
 import ShiftEditView from './views/ShiftEditView';
+import { updateUserPassword } from './services/api';
 
 const ROLE_LABELS: Record<Role, string> = {
   manager: '店長',
@@ -65,7 +66,7 @@ export default function App() {
     csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd,
     ctName, setCtName, ctDesc, setCtDesc, ctPri, setCtPri, ctXp, setCtXp,
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
-    toast, handleLogin, logout, handleNav, isMgr, isStf,
+    toast, handleLogin, logout, handleNav, isMgr, isLeadership, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
     renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskCreateSubmit,
@@ -74,6 +75,8 @@ export default function App() {
     handleTaskTogglePool, handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
     password, setPassword,
   } = controller;
+
+  const canUseManagerScreens = isLeadership;
 
 
 
@@ -86,21 +89,13 @@ export default function App() {
   const handlePwSave = async () => {
     if (!currentUser) return;
     try {
-      const res = await fetch(`http://localhost:5001/api/users/${currentUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pwValue }),
-      });
-      if (res.ok) {
-        setUsers((prev) => prev.map((u) => u.id === currentUser.id ? { ...u, password: pwValue } : u));
-        setCurrentUser({ ...currentUser, password: pwValue });
-        setPwOpen(false);
-        toast('パスワードを変更しました');
-      } else {
-        toast('パスワード変更に失敗しました');
-      }
+      await updateUserPassword(currentUser.id, pwValue);
+      setUsers((prev) => prev.map((u) => u.id === currentUser.id ? { ...u, password: pwValue } : u));
+      setCurrentUser({ ...currentUser, password: pwValue });
+      setPwOpen(false);
+      toast('パスワードを変更しました');
     } catch {
-      toast('通信エラーが発生しました');
+      toast('パスワード変更に失敗しました');
     }
   };
 
@@ -111,12 +106,12 @@ export default function App() {
     setPwOpen(true);
   };
 
-  const dsObj = useMemo(() => dashboardStats(shifts, tasks, currentUser, isMgr), [shifts, tasks, currentUser, isMgr]);
+  const dsObj = useMemo(() => dashboardStats(shifts, tasks, currentUser, canUseManagerScreens), [shifts, tasks, currentUser, canUseManagerScreens]);
   const todayShifts = useMemo(() => renderTodayShifts(shifts, users, currentUser), [shifts, users, currentUser]);
-  const dashTasks = useMemo(() => dashboardTasks(tasks, currentUser, isMgr), [tasks, currentUser, isMgr]);
+  const dashTasks = useMemo(() => dashboardTasks(tasks, currentUser, canUseManagerScreens), [tasks, currentUser, canUseManagerScreens]);
   const cal = useMemo(() => renderCalendar(cy, cm, shifts, currentUser), [cy, cm, shifts, currentUser]);
   const currentMonthLabel = useMemo(() => cal?.monthNames[cm] ?? '', [cal, cm]);
-  const tasksForView = useMemo(() => taskList(tasks, currentUser, isMgr, isStf ?? false, tFilter), [tasks, currentUser, isMgr, isStf, tFilter]);
+  const tasksForView = useMemo(() => taskList(tasks, currentUser, canUseManagerScreens, isStf ?? false, tFilter), [tasks, currentUser, canUseManagerScreens, isStf, tFilter]);
   const gachaTaskVal = useMemo(() => gachaTask(tasks, currentUser), [tasks, currentUser]);
   const pullTotal = useMemo(() => gLog.length, [gLog]);
   const pullLast = useMemo(() => gLog.length ? gLog[gLog.length - 1].rarity ?? gLog[gLog.length - 1].name : '—', [gLog]);
@@ -125,7 +120,7 @@ export default function App() {
 
   const renderTaskActions = (task: Task) => {
     if (!currentUser) return null;
-    if (isMgr) {
+    if (canUseManagerScreens) {
       return (
         <>
           {task.st === 'review' ? (
@@ -222,7 +217,7 @@ export default function App() {
             <main>
               <DashboardView
                 isActive={activePage === 'dashboard'}
-                isMgr={isMgr}
+                isMgr={canUseManagerScreens}
                 currentUser={currentUser}
                 dsObj={dsObj}
                 tasks={tasks}
@@ -235,7 +230,7 @@ export default function App() {
 
               <ShiftView
                 isActive={activePage === 'shift'}
-                isMgr={isMgr}
+                isMgr={canUseManagerScreens}
                 isStf={!!isStf}
                 onOpenShiftRequest={() => handleNav('shift-request')}
                 onOpenShiftCreate={() => handleNav('shift-edit')}
@@ -327,6 +322,7 @@ export default function App() {
                 updateBusinessInfo={updateBusinessInfo}
                 resetBusinessInfo={resetBusinessInfo}
                 toast={toast}
+                onSave={handleSaveBusinessInfo}
               />
               <StaffView
                 isActive={activePage === 'staff'}
@@ -348,12 +344,12 @@ export default function App() {
       {currentUser ? (
         <NotificationPanel
           open={notificationOpen}
-          notifications={currentUser.role === 'manager' ? notifications : notifications.filter((item: Notification) => item.uid === currentUser.id)}
+          notifications={canUseManagerScreens ? notifications : notifications.filter((item: Notification) => item.uid === currentUser.id)}
           unreadCount={unreadCount}
           onClose={toggleNotif}
           onRead={readNotif}
           onClear={clearNotifs}
-          isMgr={isMgr}
+          isMgr={canUseManagerScreens}
           onApprove={(taskId: number) => handleNotificationAction(taskId, true)}
           onReject={(taskId: number) => handleNotificationAction(taskId, false)}
         />

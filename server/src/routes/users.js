@@ -1,16 +1,31 @@
 import express from 'express';
 import mongoose from 'mongoose';
+import { getDb } from '../config/database.js';
 
 const router = express.Router();
 
+const normalizeRole = (role) => {
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'manager' || value === 'staff' || value === 'part') return value;
+  if (value === 'admin') return 'manager';
+  return 'staff';
+};
+
+const toDbRole = (role) => {
+  const value = normalizeRole(role);
+  if (value === 'manager') return 'MANAGER';
+  return 'STAFF';
+};
+
 router.get('/', async (req, res, next) => {
   try {
-    const db = mongoose.connection.db;
+    const db = getDb();
     const users = await db.collection('users').find().toArray();
     
     const formattedUsers = users.map(u => ({
       ...u,
-      id: u.id
+      id: u.id,
+      role: normalizeRole(u.role)
     }));
     
     res.json(formattedUsers);
@@ -40,21 +55,24 @@ router.post('/', async (req, res, next) => {
       username,
       email,
       name: name.trim(),
-      role: role === 'manager' ? 'MANAGER' : 'STAFF',
+      role: toDbRole(role),
       xp: 0,
       ini,
       password,
       created_at: new Date()
     };
 
-    if (role === 'part') {
+    if (normalizeRole(role) === 'part') {
       newUser.hourlyWage = hourlyWage !== undefined ? hourlyWage : 1050;
     } else {
       newUser.monthlySalary = monthlySalary !== undefined ? monthlySalary : 250010;
     }
 
     await db.collection('users').insertOne(newUser);
-    res.status(201).json(newUser);
+    res.status(201).json({
+      ...newUser,
+      role: normalizeRole(newUser.role),
+    });
   } catch (error) {
     next(error);
   }
@@ -80,12 +98,15 @@ router.put('/:id', async (req, res, next) => {
       updateData.name = name.trim();
       updateData.ini = name.trim().charAt(0) || 'S';
     }
-    if (role !== undefined) updateData.role = role;
+    if (role !== undefined) updateData.role = toDbRole(role);
 
     await db.collection('users').updateOne({ id }, { $set: updateData });
     
     const updatedUser = await db.collection('users').findOne({ id });
-    res.json(updatedUser);
+    res.json({
+      ...updatedUser,
+      role: normalizeRole(updatedUser.role),
+    });
   } catch (error) {
     next(error);
   }
