@@ -90,6 +90,42 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
   const selectedCount = selectedTaskIds.length;
   const selectedTask = selectedCount === 1 ? allTasks.find((task) => task.id === selectedTaskIds[0]) : undefined;
   const isAllTab = tFilter === 'all';
+  const mobileTabs = [
+    { key: 'all', label: 'すべて' },
+    { key: 'pool-in', label: 'プール内' },
+    { key: 'pool-out', label: 'プール外' },
+    { key: 'progress', label: '進行状況' },
+    { key: 'done', label: '完了' },
+  ] as const;
+
+  const handleTabSelect = (key: 'all' | 'progress' | 'done' | 'pool-in' | 'pool-out') => {
+    if (key === 'all') {
+      setTFilter('all');
+      setPoolFilter('all');
+      return;
+    }
+    if (key === 'progress') {
+      setTFilter('progress');
+      return;
+    }
+    if (key === 'done') {
+      setTFilter('done');
+      return;
+    }
+    if (key === 'pool-in') {
+      setPoolFilter('in');
+      return;
+    }
+    setPoolFilter('out');
+  };
+
+  const isTabActive = (key: 'all' | 'progress' | 'done' | 'pool-in' | 'pool-out') => {
+    if (key === 'all') return tFilter === 'all' && poolFilter === 'all';
+    if (key === 'progress') return tFilter === 'progress';
+    if (key === 'done') return tFilter === 'done';
+    if (key === 'pool-in') return poolFilter === 'in';
+    return poolFilter === 'out';
+  };
 
   useEffect(() => {
     if (editNoticeTimeout.current) {
@@ -127,7 +163,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         draggable
         onDragStart={() => handleDragStart(task.id)}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+        <div className="task-row-main">
           {showCheckbox && (
             <input
               type="checkbox"
@@ -136,16 +172,16 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
               onClick={(e) => e.stopPropagation()}
             />
           )}
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '13px', fontWeight: 500 }}>{task.name}</div>
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>{task.desc}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '12px', color: '#666' }}>
+          <div className="task-row-content">
+            <div className="task-row-title">{task.name}</div>
+            <div className="task-row-desc">{task.desc}</div>
+            <div className="task-row-meta">
               <span>{assignee ? assignee.name : '未割当'}</span>
               <span>+{task.xp}XP</span>
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+        <div className="task-row-actions">
           {priorityBadge(task.pri)}
           {renderTaskActions(task)}
         </div>
@@ -158,7 +194,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
       <div className="ph">
         <div><div className="pt">タスク管理</div></div>
         {isStf ? (
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div className="task-actions-row">
             <button
               className="btn btn-dark"
               type="button"
@@ -191,16 +227,23 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         ) : null}
       </div>
       <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-          <div className="tabs">
+        <div className="task-toolbar">
+          <div className="tabs desktop-tabs">
             {(['all','progress','done'] as const).map((filter) => (
               <button key={filter} className={`tab ${tFilter === filter ? 'active' : ''}`} type="button" onClick={() => setTFilter(filter)}>
                 {filter === 'all' ? 'すべて' : filter === 'progress' ? '進行状況' : '完了'}
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#666' }}>{allTasks.filter((t) => t.inPool).length}/{allTasks.length} プール</div>
+          <div className="tabs mobile-tabs">
+            {mobileTabs.map((tab) => (
+              <button key={tab.key} className={`tab ${isTabActive(tab.key) ? 'active' : ''}`} type="button" onClick={() => handleTabSelect(tab.key)}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="task-toolbar-controls">
+            <div className="task-pool-count">{allTasks.filter((t) => t.inPool).length}/{allTasks.length} プール</div>
             <button className="btn btn-sm" type="button" onClick={() => setShowFilterPopup(true)}>
               絞り込み条件{activeFilterCount ? ` (${activeFilterCount})` : ''}
             </button>
@@ -225,7 +268,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
                 <h3 style={{ margin: 0 }}>絞り込み条件</h3>
                 <button className="btn btn-sm" type="button" onClick={() => setShowFilterPopup(false)}>閉じる</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="filter-grid">
                 <div style={{ border: '1px solid #e5e5e5', borderRadius: '8px', padding: '14px', backgroundColor: '#fafafa' }}>
                   <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '10px', color: '#555' }}>プール</div>
                   <select value={poolFilter} onChange={(e) => setPoolFilter(e.target.value as any)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e5e5', fontSize: '13px' }}>
@@ -315,38 +358,54 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         ) : null}
 
         {tFilter === 'all' ? (
-          <div className="task-board">
-            <div
-              className="task-board-column task-board-droptarget"
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => handleDrop(event, true)}
-            >
-              <div className="task-board-column-header">
-                <div>ガチャプール内</div>
-                <div>{poolTasks.length}</div>
+          <>
+            <div className="task-board desktop-only">
+              <div
+                className="task-board-column task-board-droptarget"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => handleDrop(event, true)}
+              >
+                <div className="task-board-column-header">
+                  <div>ガチャプール内</div>
+                  <div>{poolTasks.length}</div>
+                </div>
+                <div className="task-board-column-list">
+                  {poolTasks.length === 0 ? (
+                    <div className="task-board-empty">ガチャプール内のタスクはありません</div>
+                  ) : poolTasks.map((task) => renderTaskRow(task, true))}
+                </div>
               </div>
-              <div className="task-board-column-list">
-                {poolTasks.length === 0 ? (
-                  <div className="task-board-empty">ガチャプール内のタスクはありません</div>
-                ) : poolTasks.map((task) => renderTaskRow(task, true))}
+              <div
+                className="task-board-column task-board-droptarget"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => handleDrop(event, false)}
+              >
+                <div className="task-board-column-header">
+                  <div>プール外タスク</div>
+                  <div>{nonPoolTasks.length}</div>
+                </div>
+                <div className="task-board-column-list">
+                  {nonPoolTasks.length === 0 ? (
+                    <div className="task-board-empty">プール外のタスクはありません</div>
+                  ) : nonPoolTasks.map((task) => renderTaskRow(task, true))}
+                </div>
               </div>
             </div>
-            <div
-              className="task-board-column task-board-droptarget"
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => handleDrop(event, false)}
-            >
-              <div className="task-board-column-header">
-                <div>プール外タスク</div>
-                <div>{nonPoolTasks.length}</div>
-              </div>
-              <div className="task-board-column-list">
-                {nonPoolTasks.length === 0 ? (
-                  <div className="task-board-empty">プール外のタスクはありません</div>
-                ) : nonPoolTasks.map((task) => renderTaskRow(task, true))}
+
+            <div className="task-board mobile-only">
+              <div className="task-board-column">
+                <div className="task-board-column-header">
+                  <div>タスク</div>
+                  <div>{filteredTasks.length}</div>
+                </div>
+                <div className="task-board-column-list">
+                  {filteredTasks.length === 0 ? (
+                    <div className="task-board-empty">タスクはありません</div>
+                  ) : filteredTasks.map((task) => renderTaskRow(task, true))}
+                </div>
               </div>
             </div>
-          </div>
+          </>
         ) : tFilter === 'progress' ? (
           <div className="task-board task-board-progress">
             {(['pending','in_progress','review','done'] as const).map((status) => (
