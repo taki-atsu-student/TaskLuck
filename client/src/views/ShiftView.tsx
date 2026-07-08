@@ -36,6 +36,7 @@ const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
 export function ShiftView({ isActive, isMgr, isStf, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo, understaffedDates }: ShiftViewProps) {
   const [activeTab, setActiveTab] = useState<ShiftAssignment>('hall');
+  const [selectedDate, setSelectedDate] = useState<string>(todayIso);
   const [showPdfPopup, setShowPdfPopup] = useState(false);
 
   const pdfMonthInfo = useMemo(() => {
@@ -155,21 +156,21 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
   }), [displayUsers]);
 
   const todayTitle = useMemo(() => {
-    const d = new Date(todayIso);
-    if (Number.isNaN(d.getTime())) return todayIso;
+    const d = new Date(selectedDate);
+    if (Number.isNaN(d.getTime())) return selectedDate;
     return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${DAY_LABELS[d.getDay()]}）`;
-  }, [todayIso]);
+  }, [selectedDate]);
 
   const todayTabShifts = useMemo(() => (
     shifts
-      .filter((shift) => shift.date === todayIso && shift.st === 'confirmed' && !shift.isOff)
+      .filter((shift) => shift.date === selectedDate && shift.st === 'confirmed' && !shift.isOff)
       .filter((shift) => {
         const assignments = shift.assignments ?? [];
         if (assignments.length > 0) return assignments.includes(activeTab);
         return tabUsers[activeTab].some((user) => user.id === shift.uid);
       })
       .sort((a, b) => toMin(a.s) - toMin(b.s))
-  ), [activeTab, shifts, tabUsers, todayIso]);
+  ), [activeTab, shifts, tabUsers, selectedDate]);
 
   const visibleUsers = useMemo(() => {
     const base = tabUsers[activeTab];
@@ -249,15 +250,22 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
                 if (cell.type === 'prev' || cell.type === 'next') return <div className="cal-cell other" key={idx}><div className="cal-n">{cell.dateNumber}</div></div>;
                 const dow = cell.dateKey ? new Date(cell.dateKey).getDay() : -1;
                 const closed = dow >= 0 && businessInfo.regularClosedDays.includes(DOW_TO_KEY[dow]);
+                const isSelected = cell.dateKey === selectedDate;
                 return (
-                  <div className={`cal-cell${cell.isToday ? ' today' : ''}${!closed && understaffedDates.has(cell.dateKey) ? ' understaffed' : ''}${closed ? ' closed' : ''}`} key={cell.dateKey} style={closed ? { background: '#dcf6e5' } : undefined}>
+                  <button
+                    type="button"
+                    className={`cal-cell${cell.isToday ? ' today' : ''}${!closed && understaffedDates.has(cell.dateKey) ? ' understaffed' : ''}${closed ? ' closed' : ''}${isSelected ? ' selected' : ''}`}
+                    key={cell.dateKey}
+                    style={closed ? { background: '#dcf6e5' } : isSelected ? { background: '#e3f2fd', borderColor: '#2196F3', borderWidth: '2px' } : undefined}
+                    onClick={() => setSelectedDate(cell.dateKey)}
+                  >
                     <div className="cal-n" style={{ color: dow === 0 ? '#e0506a' : dow === 6 ? '#4b9be0' : undefined }}>{cell.day}</div>
                     {closed ? (
                       <div style={{ fontSize: '10px', color: '#2f9e57', fontWeight: 600, textAlign: 'center', marginTop: '2px' }}>定休日</div>
                     ) : cell.myShift ? (
                       <div className="cal-ev cal-ev-me">{cell.myShift.s.slice(0, 5)}-{cell.myShift.e.slice(0, 5)}</div>
                     ) : null}
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -271,7 +279,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
           onTabChange={setActiveTab}
           rowShifts={rowShifts}
           readOnly
-          emptyMessage="本日のシフトはありません。"
+          emptyMessage="このシフトはありません。"
         />
       </div>
     </div>
