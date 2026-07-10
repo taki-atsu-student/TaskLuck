@@ -36,7 +36,7 @@ const StoreIcon = ({ type }: { type: 'users' | 'clock' | 'calendar' | 'edit' | '
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>;
 };
 
-export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, resetBusinessInfo, toast }: BusinessInfoViewProps) {
+export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, resetBusinessInfo, toast, onSave }: BusinessInfoViewProps) {
   const [newSpecialDate, setNewSpecialDate] = useState('2024-08-15');
 
   const updateSlot = (slotId: string, field: 'weekday' | 'holiday', value: number) => {
@@ -93,7 +93,14 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
     toast('特別設定を削除しました');
   };
 
-  const saveSettings = () => toast('店舗設定を保存しました');
+  const saveSettings = async () => {
+    try {
+      await onSave();
+    } catch {
+      toast('店舗設定の保存に失敗しました');
+    }
+  };
+
   const cancelSettings = () => {
     resetBusinessInfo();
     toast('店舗設定をキャンセルしました');

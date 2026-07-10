@@ -326,6 +326,7 @@ export default function App() {
                 updateBusinessInfo={updateBusinessInfo}
                 resetBusinessInfo={resetBusinessInfo}
                 toast={toast}
+                onSave={handleSaveBusinessInfo}
               />
               <StaffView
                 isActive={activePage === 'staff'}

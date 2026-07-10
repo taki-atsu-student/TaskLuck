@@ -190,7 +190,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
   };
 
   return (
-    <div className={`page ${isActive ? 'show' : ''}`} id="pg-task">
+    <div className={`page task-view-page ${isActive ? 'show' : ''}`} id="pg-task">
       <div className="ph">
         <div><div className="pt">タスク管理</div></div>
         {isStf ? (
@@ -335,7 +335,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', margin: '10px 0', alignItems: 'center' }}>
           <div style={{ color: '#666', fontSize: '13px' }}>
-            {activeFilterCount ? `絞り込み条件 ${activeFilterCount} 件設定中` : '絞り込み条件はボタンから設定できます'}
+            {activeFilterCount ? `絞り込み条件 ${activeFilterCount} 件設定中` : null}
           </div>
         </div>
 
