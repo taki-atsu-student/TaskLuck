@@ -20,7 +20,7 @@ export const checkAuth = async (req, res, next) => {
     const payload = await verifier.verify(token);
 
     // Cognitoの username や email を使って、完全版の users テーブルから検索
-    const db = mongoose.connection.db;
+    const db = await getDb();
     const user = await db.collection('users').findOne({ 
       $or: [
         { username: payload.username },

@@ -3,7 +3,7 @@ import { getDb } from '../config/database.js';
 // 🎯 1. 店舗情報の取得 (GET /api/business-info)
 export const getBusinessInfo = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     // コレクションから最初の1件を取得
     let info = await db.collection('business_info').findOne({});
     
@@ -31,7 +31,7 @@ export const getBusinessInfo = async (req, res) => {
 export const updateBusinessInfo = async (req, res) => {
   try {
     const { storeName, minStaffPerShift, targetXpPerMonth, positions } = req.body;
-    const db = getDb();
+    const db = await getDb();
 
     const newInfo = {
       storeName: storeName || "TaskLuck店舗",
