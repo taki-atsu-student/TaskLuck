@@ -565,7 +565,7 @@ export default function useAppController() {
     if (!currentUserParam) return;
     setGachaLockFn(true);
     try {
-      const data = await pullGacha({ availableTasks: avail });
+      const data = await pullGacha({ userId: currentUserParam.id, availableTasks: avail });
       await updateTask(data.task.id, { st: 'in_progress', to: currentUserParam.id });
       await refreshTasks();
       await refreshGachaHistory();
