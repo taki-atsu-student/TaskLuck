@@ -405,6 +405,14 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%;padding-bottom:calc(16px + en
   .modal h3{font-size:14px}
   .mfg input,.mfg select,.mfg textarea{font-size:12px}
 }
+@media(max-width:768px){
+  /* タスク一覧を画面内でスクロール可能にする */
+  .task-board-column-list{
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+  }
+}
+
 
 /* SHIFT EDIT - CALENDAR */
 .shift-edit-cal .cal-cell{cursor:pointer}

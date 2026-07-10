@@ -28,6 +28,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showTaskMenu, setShowTaskMenu] = useState(false);
   const [editNotice, setEditNotice] = useState('');
   const editNoticeTimeout = useRef<number | null>(null);
   const [dragTaskId, setDragTaskId] = useState<number | null>(null);
@@ -195,36 +196,96 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         <div><div className="pt">タスク管理</div></div>
         {isStf ? (
           <div className="task-actions-row">
-            <button
-              className="btn btn-dark"
-              type="button"
-              disabled={selectedCount === 0 || !onEditTask}
-              onClick={() => {
-                if (selectedCount > 1) {
-                  setEditNotice('編集したいタスクにのみチェックを入れてください');
-                  return;
-                }
-                if (selectedTask && onEditTask) {
-                  onEditTask(selectedTask);
-                }
-              }}
-            >
-              タスク編集
-            </button>
-            <button
-              className="btn btn-dark"
-              type="button"
-              disabled={selectedCount === 0}
-              onClick={() => {
-                if (selectedCount === 0) return;
-                setShowDeleteConfirm(true);
-              }}
-            >
-              タスク削除
-            </button>
-            <button className="btn btn-dark" id="btn-ct" type="button" onClick={onOpenTaskModal}>+ タスク追加</button>
-          </div>
+
+  <button
+    className="btn btn-dark"
+    type="button"
+    onClick={() => setShowTaskMenu(true)}
+  >
+    タスク編集・削除
+  </button>
+
+  <button
+    className="btn btn-dark"
+    id="btn-ct"
+    type="button"
+    onClick={onOpenTaskModal}
+  >
+    + タスク追加
+  </button>
+
+</div>
         ) : null}
+        {showTaskMenu && (
+  <div
+    className="overlay open"
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center"
+    }}
+    onClick={(e) => {
+      if (e.target === e.currentTarget) {
+        setShowTaskMenu(false);
+      }
+    }}
+  >
+    <div
+      style={{
+        background: "#fff",
+        width: "420px",
+        borderRadius: "12px",
+        padding: "24px"
+      }}
+    >
+      <h3>タスク編集・削除</h3>
+
+      <p>
+        編集・削除したいタスクにチェックを入れてください。
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "10px",
+          marginTop: "20px"
+        }}
+      >
+        <button
+          className="btn"
+          onClick={() => setShowTaskMenu(false)}
+        >
+          キャンセル
+        </button>
+
+        <button
+          className="btn btn-dark"
+          disabled={selectedCount !== 1}
+          onClick={() => {
+            if (selectedTask && onEditTask) {
+              onEditTask(selectedTask);
+              setShowTaskMenu(false);
+            }
+          }}
+        >
+          編集
+        </button>
+
+        <button
+          className="btn btn-danger"
+          disabled={selectedCount === 0}
+          onClick={() => {
+            setShowTaskMenu(false);
+            setShowDeleteConfirm(true);
+          }}
+        >
+          削除
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       </div>
       <div className="card">
         <div className="task-toolbar">
@@ -338,7 +399,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
             {activeFilterCount ? `絞り込み条件 ${activeFilterCount} 件設定中` : null}
           </div>
         </div>
-
+        
         {showDeleteConfirm ? (
           <div className="overlay open" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }} onClick={(event) => { if (event.target === event.currentTarget) setShowDeleteConfirm(false); }}>
             <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: 'min(420px,100%)', boxShadow: '0 15px 45px rgba(0,0,0,0.12)' }}>
