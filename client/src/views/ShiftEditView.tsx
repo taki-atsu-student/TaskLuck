@@ -328,7 +328,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
         <div className="modal">
           <h3>メモ入力</h3>
           <div className="mfg"><label>日付</label><input type="text" value={memoDate} readOnly /></div>
-          <div className="mfg"><label>メモ</label><textarea rows={4} value={memoText} onChange={(event) => setMemoText(event.target.value)} placeholder="メモを入力" /></div>
+          <div className="mfg"><label>メモ</label><textarea rows={4} value={memoText} onChange={(event) => setMemoText(event.target.value)} placeholder="メモを入力してください" /></div>
           <div className="mf">
             <button className="btn" type="button" onClick={() => setMemoOpen(false)}>キャンセル</button>
             <button className="btn btn-dark" type="button" onClick={saveMemo}>保存</button>

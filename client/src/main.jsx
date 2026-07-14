@@ -2,10 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { Amplify } from 'aws-amplify'; 
-
-console.log("UserPoolId:", import.meta.env.VITE_COGNITO_USER_POOL_ID);
-console.log("ClientId:", import.meta.env.VITE_COGNITO_CLIENT_ID);
+import { Amplify } from 'aws-amplify';
 
 Amplify.configure({
   Auth: {

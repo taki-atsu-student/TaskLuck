@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { logError } from '../utils/logger.js';
 
 export const connectDatabase = async () => {
   try {
@@ -7,9 +8,8 @@ export const connectDatabase = async () => {
       throw new Error("MONGODB_URI が .env ファイルに設定されていません。");
     }
     await mongoose.connect(url);
-    console.log("🟢 [Database] .envの環境変数を使って安全にMongoDBに接続しました！");
   } catch (error) {
-    console.error('❌ [Database] MongoDB connection error:', error.message);
+    logError('❌ [Database] MongoDB connection error:', error.message);
     throw error;
   }
 };

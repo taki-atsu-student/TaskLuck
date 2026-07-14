@@ -299,7 +299,7 @@ export default function ShiftRequestScreen({
                 パターン名
                 <input
                   value={draft.title}
-                  placeholder="例：パターンC"
+                  placeholder="例: パターンC"
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                   style={{ display: "block", width: "100%", marginTop: "4px", border: "1px solid #e7e7ea", borderRadius: "6px", padding: "7px 8px", fontSize: "13px" }}
                 />
@@ -308,7 +308,7 @@ export default function ShiftRequestScreen({
                 メモ
                 <input
                   value={draft.memo}
-                  placeholder="例：早番"
+                  placeholder="例: 早番"
                   onChange={(e) => setDraft({ ...draft, memo: e.target.value })}
                   style={{ display: "block", width: "100%", marginTop: "4px", border: "1px solid #e7e7ea", borderRadius: "6px", padding: "7px 8px", fontSize: "13px" }}
                 />

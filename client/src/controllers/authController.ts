@@ -49,9 +49,7 @@ export const createAuthHandlers = ({
         const confirmResult = await confirmSignIn({
           challengeResponse: password,
           options: {
-            userAttributes: {
-              email: `${normalizedUsername}@example.com`,
-            },
+            userAttributes: {},
           },
         });
         authenticated = confirmResult.isSignedIn;

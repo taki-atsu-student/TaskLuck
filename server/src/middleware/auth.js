@@ -36,7 +36,7 @@ export const checkAuth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('認証エラー:', error);
+    logError('認証エラー:', error);
     return res.status(401).json({ error: 'トークンが無効です' });
   }
 };
