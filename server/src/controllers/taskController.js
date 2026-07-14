@@ -5,7 +5,7 @@ import { buildTaskInsertPayload, buildTaskUpdatePayload, parseTaskId, toTaskView
 // 1. タスク一覧取得
 export const getTasks = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const rawTasks = await db.collection('tasks').find().sort({ created_at: -1 }).toArray();
     const tasks = rawTasks.map(toTaskViewModel);
 
@@ -19,7 +19,7 @@ export const getTasks = async (req, res) => {
 // 2. タスク作成
 export const createTask = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     
     const taskData = buildTaskInsertPayload(req.body);
 
@@ -38,7 +38,7 @@ export const createTask = async (req, res) => {
 // 3. ガチャ用タスク取得
 export const getAvailableTasks = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const rawTasks = await db.collection('tasks').find({ is_gacha_target: true }).toArray();
     const tasks = rawTasks.map((taskDoc) => ({ ...toTaskViewModel(taskDoc), inPool: true }));
 
@@ -52,7 +52,7 @@ export const getAvailableTasks = async (req, res) => {
 // 4. タスク更新
 export const updateTask = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const id = parseTaskId(req.params.id);
     const updateData = buildTaskUpdatePayload(req.body);
 
@@ -71,7 +71,7 @@ export const updateTask = async (req, res) => {
 // 5. タスク削除
 export const deleteTask = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const id = parseTaskId(req.params.id);
     
     await db.collection('tasks').deleteOne({ _id: id });

@@ -41,7 +41,7 @@ export const drawGacha = async (req, res) => {
       return res.status(400).json({ error: 'ユーザーIDが必要です' });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     // 🛠️ 1. 同時引き防止（taskControllerの status と to 列名に統一）
     const existingActiveTask = await db.collection('tasks').findOne({
@@ -125,7 +125,7 @@ export const drawGacha = async (req, res) => {
 // 🎯 GET /api/gacha/history - ガチャ履歴取得（DBから取得）
 export const getGachaHistory = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const history = await db.collection('gachalog').find().sort({ timestamp: -1 }).toArray();
     res.json(history);
   } catch (error) {
@@ -136,7 +136,7 @@ export const getGachaHistory = async (req, res) => {
 // 🎯 GET /api/gacha/history/count - ガチャ総回数
 export const getGachaCount = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const count = await db.collection('gachalog').countDocuments();
     res.json({ count });
   } catch (error) {

@@ -19,7 +19,7 @@ const toDbRole = (role) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const db = getDb();
+    const db = await await getDb();
     const users = await db.collection('users').find().toArray();
     
     const formattedUsers = users.map(u => ({
@@ -41,7 +41,7 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: '名前は必須です' });
     }
 
-    const db = mongoose.connection.db;
+    const db = await await getDb();
     const allUsers = await db.collection('users').find().toArray();
 
     const newId = allUsers.length > 0 ? Math.max(...allUsers.map((u) => u.id || 0)) + 1 : 1;
@@ -81,7 +81,7 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const db = mongoose.connection.db;
+    const db = await await getDb();
     
     const user = await db.collection('users').findOne({ id });
     if (!user) {

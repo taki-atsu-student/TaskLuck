@@ -20,7 +20,7 @@ const toDbRole = (role) => {
 // 🎯 1. スタッフ一覧取得 (GET /api/staff)
 export const getStaffList = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const rawUsers = await db.collection('users').find().toArray();
     
     // 完全版のDB構造 (id, current_xp) をフロントの期待する型に整えて返す
@@ -49,7 +49,7 @@ export const createStaff = async (req, res) => {
       return res.status(400).json({ error: "名前を入力してください" });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     // 現在の最大 id を取得して +1（完全版のフィールド「id」に合わせる）
     const lastUser = await db.collection('users').find().sort({ id: -1 }).limit(1).toArray();
@@ -121,7 +121,7 @@ export const addStaffXp = async (req, res) => {
       return res.status(400).json({ error: "ユーザーIDとXPは必須です" });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     // 完全版のフィールド「id」と「current_xp」に対して加算を行う
     const result = await db.collection('users').updateOne(

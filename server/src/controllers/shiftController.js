@@ -4,7 +4,7 @@ import { ObjectId } from 'mongodb';
 // 🎯 1. シフト一覧・希望データの取得 (GET /api/shifts)
 export const getShifts = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     // すべてのシフト・申請データを取得
     const rawShifts = await db.collection('shifts').find().toArray();
     
@@ -35,7 +35,7 @@ export const createShiftRequest = async (req, res) => {
       return res.status(400).json({ error: "ユーザーIDと日付は必須です" });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     // 💡 同じ人が同じ日にすでに「希望」を出していたら上書き、なければ新規追加
     const shiftData = {
@@ -77,7 +77,7 @@ export const createConfirmedShift = async (req, res) => {
       return res.status(400).json({ error: "入力項目を確認してください" });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     const shiftData = {
       user_id: Number(uid),
