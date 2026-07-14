@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from 'react';
 import { Shift, ShiftAssignment, User, BusinessInfo, BusinessDayKey } from '../models';
 import { ShiftGanttChart, START_MIN, END_MIN, TOTAL_MIN, STEP_MIN, toMin, toTime, roundStep } from '../components/ShiftGanttChart';
 
@@ -8,7 +8,10 @@ type ShiftEditViewProps = {
   isActive: boolean;
   cal: CalendarData;
   currentMonthLabel: string;
-  setCm: (fn: (prev: number) => number) => void;
+  cm: number;
+  cy: number;
+  setCm: Dispatch<SetStateAction<number>>;
+  setCy: Dispatch<SetStateAction<number>>;
   users: User[];
   shifts: Shift[];
   setShifts: (fn: (prev: Shift[]) => Shift[]) => void;
@@ -27,7 +30,7 @@ const HOLIDAYS = new Set([
   '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03'
 ]);
 
-export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates, businessInfo }: ShiftEditViewProps) {
+export default function ShiftEditView({ isActive, cal, currentMonthLabel, cm, cy, setCm, setCy, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates, businessInfo }: ShiftEditViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editShifts, setEditShifts] = useState<Shift[]>(shifts);
@@ -193,6 +196,25 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
     toast('シフトを追加しました');
   };
 
+  const navigateMonth = (direction: -1 | 1) => {
+    if (direction === -1) {
+      if (cm === 0) {
+        setCm(11);
+        setCy((year) => (year > 1980 ? year - 1 : 1980));
+      } else {
+        setCm(cm - 1);
+      }
+      return;
+    }
+
+    if (cm === 11) {
+      setCm(0);
+      setCy((year) => year + 1);
+    } else {
+      setCm(cm + 1);
+    }
+  };
+
   const autoCreate = () => {
     const monthDates = (cal?.cells ?? [])
       .filter((cell) => cell.type !== 'prev' && cell.type !== 'next')
@@ -249,9 +271,9 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
         {cal ? (
           <>
             <div className="cal-nav">
-              <button className="btn btn-sm" type="button" onClick={() => setCm((prev) => prev - 1 < 0 ? 11 : prev - 1)}>‹‹</button>
+              <button className="btn btn-sm" type="button" onClick={() => navigateMonth(-1)}>‹‹</button>
               <span className="cal-month">{currentMonthLabel}</span>
-              <button className="btn btn-sm" type="button" onClick={() => setCm((prev) => prev + 1 > 11 ? 0 : prev + 1)}>››</button>
+              <button className="btn btn-sm" type="button" onClick={() => navigateMonth(1)}>››</button>
             </div>
             <div className="cal-grid shift-edit-cal">
               {cal.dayNames.map((dn, i) => (

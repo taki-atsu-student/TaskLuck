@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Dispatch, SetStateAction, useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { Shift, ShiftAssignment, User, BusinessInfo, BusinessDayKey } from '../models';
 import { ShiftGanttChart, toMin } from '../components/ShiftGanttChart';
@@ -11,7 +11,10 @@ type ShiftViewProps = {
   onOpenShiftCreate: () => void;
   cal: { monthNames: string[]; dayNames: string[]; cells: any[] } | null;
   currentMonthLabel: string;
-  setCm: (fn: (prev: number) => number) => void;
+  cm: number;
+  cy: number;
+  setCm: Dispatch<SetStateAction<number>>;
+  setCy: Dispatch<SetStateAction<number>>;
   shifts: Shift[];
   todayIso: string;
   users: User[];
@@ -34,7 +37,7 @@ type ShiftViewProps = {
 const DOW_TO_KEY: BusinessDayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
-export function ShiftView({ isActive, isMgr, isStf, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, setCm, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo, understaffedDates }: ShiftViewProps) {
+export function ShiftView({ isActive, isMgr, isStf, onOpenShiftRequest, onOpenShiftCreate, cal, currentMonthLabel, cm, cy, setCm, setCy, shifts, todayIso, users, toast, setShifts, csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd, onShiftRequestSubmit, onShiftCreateSubmit, businessInfo, understaffedDates }: ShiftViewProps) {
   const [activeTab, setActiveTab] = useState<ShiftAssignment>('hall');
   const [selectedDate, setSelectedDate] = useState<string>(todayIso);
   const [showPdfPopup, setShowPdfPopup] = useState(false);
@@ -184,6 +187,26 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
     user,
     shifts: todayTabShifts.filter((shift) => shift.uid === user.id),
   })), [todayTabShifts, visibleUsers]);
+
+  const navigateMonth = (direction: -1 | 1) => {
+    if (direction === -1) {
+      if (cm === 0) {
+        setCm(11);
+        setCy((year) => (year > 1980 ? year - 1 : 1980));
+      } else {
+        setCm(cm - 1);
+      }
+      return;
+    }
+
+    if (cm === 11) {
+      setCm(0);
+      setCy((year) => year + 1);
+    } else {
+      setCm(cm + 1);
+    }
+  };
+
   return (
     <div className={`page ${isActive ? 'show' : ''}`} id="pg-shift">
       <div className="ph">
@@ -232,9 +255,9 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
         {cal ? (
           <>
             <div className="cal-nav">
-              <button className="btn btn-sm" type="button" onClick={() => setCm((prev) => prev - 1 < 0 ? 11 : prev - 1)}>‹‹</button>
+              <button className="btn btn-sm" type="button" onClick={() => navigateMonth(-1)}>‹‹</button>
               <span className="cal-month">{currentMonthLabel}</span>
-              <button className="btn btn-sm" type="button" onClick={() => setCm((prev) => prev + 1 > 11 ? 0 : prev + 1)}>››</button>
+              <button className="btn btn-sm" type="button" onClick={() => navigateMonth(1)}>››</button>
             </div>
             <div className="cal-grid">
               {cal.dayNames.map((dn, i) => (
