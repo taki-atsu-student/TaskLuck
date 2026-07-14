@@ -81,7 +81,7 @@ export default function useAppController() {
   const refreshShifts = dataHandlers.refreshShifts;
   const refreshBusinessInfo = dataHandlers.refreshBusinessInfo;
   const refreshNotifications = dataHandlers.refreshNotifications;
-  const refreshGachaHistory = dataHandlers.refreshGachaHistory;
+  const refreshGachaLog = dataHandlers.refreshGachaLog;
   const setShiftPatterns = dataHandlers.setShiftPatterns;
 
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function useAppController() {
     void refreshShifts();
     void refreshBusinessInfo();
     void refreshNotifications();
-    void refreshGachaHistory();
+    void refreshGachaLog();
   }, []);
 
   useEffect(() => {
@@ -235,7 +235,7 @@ export default function useAppController() {
   const gachaHandlers = createGachaHandlers({
     currentUser,
     refreshTasks,
-    refreshGachaHistory,
+    refreshGachaLog,
     addNotification: notificationHandlers.addNotification,
     setGachaLock,
     setTasks,

@@ -53,8 +53,8 @@ export const createNotification = (payload: Record<string, unknown>) => requestJ
 export const markNotificationRead = (id: number | string) => requestJson<Notification>(`/api/notifications/${id}/read`, { method: 'PUT' });
 export const deleteNotification = (id: number | string) => requestJson<{ success: boolean }>(`/api/notifications/${id}`, { method: 'DELETE' });
 
-export const fetchGachaHistory = () => requestJson<GachaLog[]>('/api/gacha/history');
-export const pullGacha = (payload: Record<string, unknown>) => requestJson<{ task: Task; rarity: string }>('/api/gacha/pull', { method: 'POST', body: JSON.stringify(payload) });
+export const fetchGachaLog = () => requestJson<GachaLog[]>('/api/gacha/gachalog');
+export const pullGacha = (payload: Record<string, unknown>) => requestJson<{ task: Task }>('/api/gacha/pull', { method: 'POST', body: JSON.stringify(payload) });
 
 export const saveShiftPatterns = (uid: number, patterns: ShiftPattern[]) => requestJson<ShiftPattern[]>(`/api/shift-patterns`, {
   method: 'POST',

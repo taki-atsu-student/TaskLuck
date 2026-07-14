@@ -4,7 +4,7 @@ import { resolveUserRole } from '../models';
 import { API_BASE_URL } from '../config/api';
 import {
   fetchBusinessInfo,
-  fetchGachaHistory,
+  fetchGachaLog,
   fetchNotifications,
   fetchShifts,
   fetchTasks,
@@ -82,12 +82,12 @@ export const createDataHandlers = ({
     }
   };
 
-  const refreshGachaHistory = async () => {
+  const refreshGachaLog = async () => {
     try {
-      const data = await fetchGachaHistory();
+      const data = await fetchGachaLog();
       if (Array.isArray(data)) setGLog(data);
     } catch (e) {
-      console.error('Failed to fetch gacha history:', e);
+      console.error('Failed to fetch gachalog:', e);
     }
   };
 
@@ -128,7 +128,7 @@ export const createDataHandlers = ({
     refreshShifts,
     refreshBusinessInfo,
     refreshNotifications,
-    refreshGachaHistory,
+    refreshGachaLog,
     fetchShiftPatterns,
     setShiftPatterns,
   };

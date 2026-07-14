@@ -5,7 +5,7 @@ import { pullGacha, updateTask } from '../services/api';
 type GachaDeps = {
   currentUser: User | null;
   refreshTasks: () => Promise<void>;
-  refreshGachaHistory: () => Promise<void>;
+  refreshGachaLog: () => Promise<void>;
   addNotification: (title: string, sub: string, uid: number, taskId?: number) => Promise<void>;
   setGachaLock: Dispatch<SetStateAction<boolean>>;
   setTasks: Dispatch<SetStateAction<Task[]>>;
@@ -16,16 +16,16 @@ type GachaDeps = {
 export const createGachaHandlers = ({
   currentUser,
   refreshTasks,
-  refreshGachaHistory,
+  refreshGachaLog,
   addNotification,
   setGachaLock,
   setTasks,
   setGLog,
   toast,
 }: GachaDeps) => {
-  const finalizeGachaDraw = (chosen: Task, currentUserParam: User, rkey: string, rarityLabel: string, _setTasksFn: (fn: any) => void, _setGLogFn: (fn: any) => void, toastFn: (m: string) => void, setGachaLockFn: (b: boolean) => void) => {
+  const finalizeGachaDraw = (chosen: Task, currentUserParam: User, _setTasksFn: (fn: any) => void, _setGLogFn: (fn: any) => void, toastFn: (m: string) => void, setGachaLockFn: (b: boolean) => void) => {
     setTasks((prev) => prev.map((task) => task.id === chosen.id ? { ...task, st: 'in_progress', to: currentUserParam.id } : task));
-    setGLog((prev) => [...prev, { name: chosen.name, xp: chosen.xp, timestamp: Date.now(), rarity: rarityLabel, rkey, time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) }]);
+    setGLog((prev) => [...prev, { name: chosen.name, xp: chosen.xp, timestamp: Date.now(), time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) }]);
     toastFn(`「${chosen.name}」が当たりました`);
     setGachaLockFn(false);
   };
@@ -52,8 +52,8 @@ export const createGachaHandlers = ({
       });
       await updateTask(data.task.id, { st: 'in_progress', to: currentUserParam.id });
       await refreshTasks();
-      await refreshGachaHistory();
-      toastFn(`「${data.task.name}」が当たりました [${data.rarity}]`);
+      await refreshGachaLog();
+      toastFn(`「${data.task.name}」が当たりました`);
     } catch (e: any) {
       console.error(e);
       const message = e?.message || '通信エラーが発生しました';
