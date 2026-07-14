@@ -23,7 +23,7 @@ export function AuthView({ loginUserId, setLoginUserId, password, setPassword, h
             value={loginUserId}
             onChange={(event) => setLoginUserId(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && handleLogin()}
-            placeholder="例: suzuki_ichiro"
+            placeholder="例: tanaka_tarou"
           />
         </div>
 
@@ -35,7 +35,7 @@ export function AuthView({ loginUserId, setLoginUserId, password, setPassword, h
             value={password} // 💡 最初は空っぽで、打った文字が入る
             onChange={(event) => setPassword(event.target.value)} 
             onKeyDown={(event) => event.key === 'Enter' && handleLogin()}
-            placeholder="パスワードを入力" 
+            placeholder="パスワードを入力してください" 
           />
         </div>
 

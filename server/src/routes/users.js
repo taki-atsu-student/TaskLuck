@@ -48,7 +48,7 @@ router.post('/', async (req, res, next) => {
     const password = `pass${String(newId).padStart(4, '0')}`;
     const ini = name.trim().charAt(0) || 'S';
     const username = `user_${newId}`;
-    const email = `${username}@example.com`;
+    const email = null;
 
     const newUser = {
       id: newId,

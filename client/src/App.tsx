@@ -376,8 +376,8 @@ export default function App() {
       <div className={`overlay ${modal === 'modal-ct' ? 'open' : ''}`} id="modal-ct" onClick={(event) => { if (event.target === event.currentTarget) setModal(null); }}>
         <div className="modal">
           <h3>{editingTaskId === null ? 'タスクを追加' : 'タスクを編集'}</h3>
-          <div className="mfg"><label>タスク名</label><input type="text" value={ctName} onChange={(event) => setCtName(event.target.value)} placeholder="例：冷蔵庫の整理" /></div>
-          <div className="mfg"><label>詳細</label><input type="text" value={ctDesc} onChange={(event) => setCtDesc(event.target.value)} placeholder="任意" /></div>
+          <div className="mfg"><label>タスク名</label><input type="text" value={ctName} onChange={(event) => setCtName(event.target.value)} placeholder="例: 冷蔵庫の整理" /></div>
+          <div className="mfg"><label>詳細</label><input type="text" value={ctDesc} onChange={(event) => setCtDesc(event.target.value)} placeholder="任意で入力してください" /></div>
           <div className="mfg"><label>優先度</label><select value={ctPri} onChange={(event) => setCtPri(event.target.value as Priority)}>
             <option value="high">高</option>
             <option value="mid">中</option>
@@ -396,7 +396,7 @@ export default function App() {
       <div className={`overlay ${modal === 'modal-as' ? 'open' : ''}`} id="modal-as" onClick={(event) => { if (event.target === event.currentTarget) setModal(null); }}>
         <div className="modal">
           <h3>スタッフを追加</h3>
-          <div className="mfg"><label>名前</label><input type="text" value={asName} onChange={(event) => setAsName(event.target.value)} placeholder="山田 太郎" /></div>
+          <div className="mfg"><label>名前</label><input type="text" value={asName} onChange={(event) => setAsName(event.target.value)} placeholder="例: 山田 太郎" /></div>
           <div className="mfg"><label>役割</label><select value={asRole} onChange={(event) => { setAsRole(event.target.value as Role); setAsSalary(event.target.value === 'part' ? 1050 : 250010); }}>
             <option value="part">アルバイト</option>
             <option value="staff">社員</option>

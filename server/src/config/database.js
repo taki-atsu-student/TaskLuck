@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { logError } from '../utils/logger.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -16,14 +17,20 @@ export const connectDatabase = async () => {
     return;
   }
   try {
+    // 🟢 1. 接続開始のログを出す（入力側の良いところ）
     console.log('🔄 MongoDBへの新規接続を開始します...');
+ 
+    // 🟢 2. 安全なオプション付きで接続する（入力側の超重要な良いところ）
     await mongoose.connect(MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
     });
+ 
+    // 🟢 3. 接続成功ログを出す（入力側の良いところ）
     console.log('🟢 [Database] 安全にMongoDBに接続しました！');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    // 🟢 4. エラー時は、HEADの優秀なロガーを使ってしっかり保存する！（現在側の良いところ）
+    logError('❌ [Database] MongoDB connection error:', error.message || error);
     throw error;
   }
 };

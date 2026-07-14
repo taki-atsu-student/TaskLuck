@@ -2,16 +2,8 @@ import express from 'express';
 
 const router = express.Router();
 
-// シフト初期データ
-let shifts = [
-  { id: 1, uid: 3, date: '2025-06-09', s: '10:00', e: '17:00', st: 'confirmed' },
-  { id: 2, uid: 4, date: '2025-06-09', s: '11:00', e: '18:00', st: 'confirmed' },
-  { id: 3, uid: 5, date: '2025-06-09', s: '13:00', e: '20:00', st: 'confirmed' },
-  { id: 4, uid: 2, date: '2025-06-10', s: '09:00', e: '17:00', st: 'confirmed' },
-  { id: 5, uid: 3, date: '2025-06-11', s: '10:00', e: '17:00', st: 'request' },
-  { id: 6, uid: 4, date: '2025-06-14', s: '12:00', e: '19:00', st: 'confirmed' },
-  { id: 7, uid: 5, date: '2025-06-16', s: '10:00', e: '16:00', st: 'confirmed' },
-];
+// シフトデータは初期状態では空にして、実データが登録されるまで表示しない
+let shifts = [];
 
 // GET /api/shifts - シフト一覧取得
 router.get('/', (_req, res) => {

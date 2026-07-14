@@ -1,4 +1,5 @@
 import { getDb } from '../config/database.js';
+import { logError } from '../utils/logger.js';
 import { buildTaskInsertPayload, buildTaskUpdatePayload, parseTaskId, toTaskViewModel } from '../services/taskService.js';
 
 // 1. タスク一覧取得
@@ -10,7 +11,7 @@ export const getTasks = async (req, res) => {
 
     res.status(200).json(tasks);
   } catch (error) {
-    console.error("getTasksでエラー:", error);
+    logError("getTasksでエラー:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -29,7 +30,7 @@ export const createTask = async (req, res) => {
 
     res.status(201).json(formattedTask);
   } catch (error) {
-    console.error("createTaskでエラー:", error);
+    logError("createTaskでエラー:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -43,7 +44,7 @@ export const getAvailableTasks = async (req, res) => {
 
     res.status(200).json(tasks);
   } catch (error) {
-    console.error("getAvailableTasksでエラー:", error);
+    logError("getAvailableTasksでエラー:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -62,7 +63,7 @@ export const updateTask = async (req, res) => {
 
     res.status(200).json(formattedTask);
   } catch (error) {
-    console.error("updateTaskでエラー:", error);
+    logError("updateTaskでエラー:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -76,7 +77,7 @@ export const deleteTask = async (req, res) => {
     await db.collection('tasks').deleteOne({ _id: id });
     res.status(200).json({ success: true, message: '削除しました' });
   } catch (error) {
-    console.error("deleteTaskでエラー:", error);
+    logError("deleteTaskでエラー:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };

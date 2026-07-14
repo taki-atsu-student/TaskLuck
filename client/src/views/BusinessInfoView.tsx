@@ -251,8 +251,8 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
                   <option value="specialClosed">{SPECIAL_TYPE_LABELS.specialClosed}</option>
                   <option value="shortHours">{SPECIAL_TYPE_LABELS.shortHours}</option>
                 </select>
-                <input type="text" value={rule.time} onChange={(event) => updateSpecialRule(rule.id, 'time', event.target.value)} placeholder="-" />
-                <input type="text" value={rule.note} onChange={(event) => updateSpecialRule(rule.id, 'note', event.target.value)} placeholder="備考" />
+                <input type="text" value={rule.time} onChange={(event) => updateSpecialRule(rule.id, 'time', event.target.value)} placeholder="例: 10:00-17:00" />
+                <input type="text" value={rule.note} onChange={(event) => updateSpecialRule(rule.id, 'note', event.target.value)} placeholder="例: 盆休み" />
                 <div className="special-actions">
                   <button type="button" aria-label="編集"><StoreIcon type="edit" /></button>
                   <button type="button" aria-label="削除" onClick={() => deleteSpecialRule(rule.id)}><StoreIcon type="trash" /></button>

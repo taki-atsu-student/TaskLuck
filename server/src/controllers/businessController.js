@@ -1,28 +1,21 @@
 import { getDb } from '../config/database.js';
+import { logError } from '../utils/logger.js';
 
 // 🎯 1. 店舗情報の取得 (GET /api/business-info)
 export const getBusinessInfo = async (req, res) => {
   try {
     const db = await getDb();
     // コレクションから最初の1件を取得
-    let info = await db.collection('business_info').findOne({});
-    
-    // もしDBにまだ何も無ければ、フロントの初期データと同じ形のデフォルト値を返す
+    const info = await db.collection('business_info').findOne({});
+
     if (!info) {
-      info = {
-        storeName: "TaskLuck店舗",
-        minStaffPerShift: 2,
-        targetXpPerMonth: 1000,
-        positions: ["レジ", "キッチン", "ホール", "清掃"]
-      };
-    } else {
-      // MongoDBの自動ID（_id）を消して綺麗にして返す
-      delete info._id;
+      return res.status(404).json({ error: '店舗情報がまだ登録されていません' });
     }
 
+    delete info._id;
     res.status(200).json(info);
   } catch (error) {
-    console.error("getBusinessInfoエラー:", error);
+    logError("getBusinessInfoエラー:", error);
     res.status(500).json({ error: "店舗情報の取得に失敗しました" });
   }
 };
@@ -34,10 +27,10 @@ export const updateBusinessInfo = async (req, res) => {
     const db = await getDb();
 
     const newInfo = {
-      storeName: storeName || "TaskLuck店舗",
-      minStaffPerShift: Number(minStaffPerShift) || 2,
-      targetXpPerMonth: Number(targetXpPerMonth) || 1000,
-      positions: positions || ["レジ", "キッチン", "ホール", "清掃"],
+      storeName: storeName ?? '',
+      minStaffPerShift: Number.isFinite(Number(minStaffPerShift)) ? Number(minStaffPerShift) : 0,
+      targetXpPerMonth: Number.isFinite(Number(targetXpPerMonth)) ? Number(targetXpPerMonth) : 0,
+      positions: Array.isArray(positions) ? positions : [],
       updated_at: new Date()
     };
 
@@ -46,7 +39,7 @@ export const updateBusinessInfo = async (req, res) => {
 
     res.status(200).json({ success: true, message: "店舗設定を保存しました", data: newInfo });
   } catch (error) {
-    console.error("updateBusinessInfoエラー:", error);
+    logError("updateBusinessInfoエラー:", error);
     res.status(500).json({ error: "店舗情報の保存に失敗しました" });
   }
 };

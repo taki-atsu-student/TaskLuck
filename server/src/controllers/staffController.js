@@ -1,5 +1,6 @@
 import { getDb } from '../config/database.js';
 import { CognitoIdentityProviderClient, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { logError, logWarn } from '../utils/logger.js';
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: "ap-northeast-1" });
 
@@ -35,7 +36,7 @@ export const getStaffList = async (req, res) => {
 
     res.status(200).json(users);
   } catch (error) {
-    console.error("getStaffListエラー:", error);
+    logError("getStaffListエラー:", error);
     res.status(500).json({ error: "スタッフ一覧の取得に失敗しました" });
   }
 };
@@ -71,10 +72,9 @@ export const createStaff = async (req, res) => {
         };
         
         await cognitoClient.send(new AdminCreateUserCommand(cognitoParams));
-        console.log(`🎉 Amazon Cognitoにユーザーを追加しました: ${username}`);
       }
     } catch (cognitoError) {
-      console.warn("⚠️ Cognitoへの登録をスキップ、または失敗しました:", cognitoError.message);
+      logWarn("⚠️ Cognitoへの登録をスキップ、または失敗しました:", cognitoError.message);
     }
 
     // 完全版 users テーブルのデータ構造に完全準拠させる
@@ -82,7 +82,7 @@ export const createStaff = async (req, res) => {
       id: newId,
       username: username,
       name: name.trim(),
-      email: `${role || 'part'}_${newId}@example.com`,
+      email: null,
       password: password,
       role: toDbRole(role), // DB側は大文字統一
       level: 1,
@@ -108,7 +108,7 @@ export const createStaff = async (req, res) => {
       password: userData.password
     });
   } catch (error) {
-    console.error("createStaffエラー:", error);
+    logError("createStaffエラー:", error);
     res.status(500).json({ error: "スタッフの追加に失敗しました" });
   }
 };
@@ -135,7 +135,7 @@ export const addStaffXp = async (req, res) => {
 
     res.status(200).json({ success: true, message: `+${xp} XP を付与しました` });
   } catch (error) {
-    console.error("addStaffXpエラー:", error);
+    logError("addStaffXpエラー:", error);
     res.status(500).json({ error: "XPの付与に失敗しました" });
   }
 };

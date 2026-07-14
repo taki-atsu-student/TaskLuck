@@ -245,7 +245,7 @@ export function StaffView({ isActive, users, setUsers, staffStats, onOpenStaffMo
                       <input
                         type="text"
                         value={w.title}
-                        placeholder="例：深夜時給"
+                        placeholder="例: 深夜時給"
                         onChange={(e) => updateExtraWage(w.id, 'title', e.target.value)}
                         style={inputStyle}
                       />
