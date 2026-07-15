@@ -117,7 +117,7 @@ export default function App() {
   const tasksForView = useMemo(() => taskList(tasks, currentUser, canUseManagerScreens, isStf ?? false, tFilter), [tasks, currentUser, canUseManagerScreens, isStf, tFilter]);
   const gachaTaskVal = useMemo(() => gachaTask(tasks, currentUser), [tasks, currentUser]);
   const pullTotal = useMemo(() => gLog.length, [gLog]);
-  const pullLast = useMemo(() => gLog.length ? gLog[gLog.length - 1].rarity ?? gLog[gLog.length - 1].name : '—', [gLog]);
+  const pullLast = useMemo(() => gLog.length ? gLog[gLog.length - 1].name : '—', [gLog]);
   const staffStatsObj = useMemo(() => staffStats(users), [users]);
   const understaffedDates = useMemo(() => computeUnderstaffedDates(shifts, businessInfo, todayIso), [shifts, businessInfo, todayIso]);
 

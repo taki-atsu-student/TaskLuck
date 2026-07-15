@@ -93,8 +93,6 @@ export interface GachaLog {
   name: string;
   xp: number;
   timestamp?: number;
-  rarity?: string;
-  rkey?: string;
   time?: string;
 }
 

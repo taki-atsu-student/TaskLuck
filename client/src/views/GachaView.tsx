@@ -12,7 +12,7 @@ type GachaViewProps = {
 
 export function GachaView({ isActive, gLog, handleGacha, handleCompleteGachaTask, gachaTaskVal, gachaLock }: GachaViewProps) {
   const pullTotal = gLog.length;
-  const pullLast = gLog.length ? gLog[gLog.length - 1].rarity ?? gLog[gLog.length - 1].name : '—';
+  const pullLast = gLog.length ? gLog[gLog.length - 1].name : '—';
 
   return (
     <div className={`page ${isActive ? 'show' : ''}`} id="pg-gacha">
@@ -99,7 +99,7 @@ export function GachaView({ isActive, gLog, handleGacha, handleCompleteGachaTask
                   <div className="w-1 h-12 bg-purple-100 rounded-full flex-shrink-0"></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900">{entry.name}</div>
-                    <p className="text-xs text-gray-500">{entry.rarity ?? 'NORMAL'} · {entry.time ?? ''}</p>
+                    <p className="text-xs text-gray-500">{entry.time ?? ''}</p>
                   </div>
                   <div className="text-lg font-bold text-purple-600">+{entry.xp} XP</div>
                 </div>

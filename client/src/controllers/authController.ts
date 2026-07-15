@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { fetchAuthSession, signIn, signOut } from 'aws-amplify/auth';
 import type { User } from '../models';
 import { resolveUserRole } from '../models';
+import { fetchUsers } from '../services/api';
 
 type ActivePage = 'dashboard' | 'shift' | 'shift-request' | 'shift-edit' | 'task' | 'gacha' | 'business-info' | 'staff' | 'notifications';
 
@@ -37,11 +38,26 @@ export const createAuthHandlers = ({
     }
 
     try {
-      const { isSignedIn, nextStep } = await signIn({
-        username: normalizedUsername,
-        password,
-      });
+      let signInResult;
+      try {
+        signInResult = await signIn({
+          username: normalizedUsername,
+          password,
+        });
+      } catch (error: any) {
+        if (error?.name !== 'UserAlreadyAuthenticatedException') {
+          throw error;
+        }
+        // 前回ログアウトが失敗した等でCognitoセッションが残っている場合、
+        // 古いセッションを破棄してから入力された認証情報で再サインインする
+        await signOut();
+        signInResult = await signIn({
+          username: normalizedUsername,
+          password,
+        });
+      }
 
+      const { isSignedIn, nextStep } = signInResult;
       let authenticated = isSignedIn;
 
       if (nextStep && nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
@@ -62,7 +78,19 @@ export const createAuthHandlers = ({
           localStorage.setItem('token', token);
         }
 
-        const selectedUser = users.find((user) => String(user.username) === String(normalizedUsername));
+        let selectedUser = users.find((user) => String(user.username) === String(normalizedUsername));
+
+        if (!selectedUser) {
+          // ページ読み込み直後などでユーザー一覧の初回取得がまだ完了していない場合に備え、
+          // 最新の一覧を取り直してから再照合する
+          try {
+            const freshUsers = await fetchUsers();
+            selectedUser = freshUsers.find((user) => String(user.username) === String(normalizedUsername));
+          } catch (e) {
+            console.error('ユーザー一覧の再取得に失敗:', e);
+          }
+        }
+
         const normalizedSelectedUser = selectedUser ? { ...selectedUser, role: resolveUserRole(selectedUser) } : null;
 
         if (!normalizedSelectedUser) {
