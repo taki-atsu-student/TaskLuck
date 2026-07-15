@@ -110,7 +110,10 @@ export default function App() {
   const todayShifts = useMemo(() => renderTodayShifts(shifts, users, currentUser), [shifts, users, currentUser]);
   const dashTasks = useMemo(() => dashboardTasks(tasks, currentUser, canUseManagerScreens), [tasks, currentUser, canUseManagerScreens]);
   const cal = useMemo(() => renderCalendar(cy, cm, shifts, currentUser), [cy, cm, shifts, currentUser]);
-  const currentMonthLabel = useMemo(() => cal?.monthNames[cm] ?? '', [cal, cm]);
+  const currentMonthLabel = useMemo(() => {
+    const monthName = cal?.monthNames[cm] ?? '';
+    return `${cy}年${monthName}`;
+  }, [cal, cm, cy]);
   const tasksForView = useMemo(() => taskList(tasks, currentUser, canUseManagerScreens, isStf ?? false, tFilter), [tasks, currentUser, canUseManagerScreens, isStf, tFilter]);
   const gachaTaskVal = useMemo(() => gachaTask(tasks, currentUser), [tasks, currentUser]);
   const pullTotal = useMemo(() => gLog.length, [gLog]);
@@ -236,7 +239,10 @@ export default function App() {
                 onOpenShiftCreate={() => handleNav('shift-edit')}
                 cal={cal}
                 currentMonthLabel={currentMonthLabel}
+                cm={cm}
+                cy={cy}
                 setCm={setCm}
+                setCy={setCy}
                 shifts={shifts}
                 todayIso={todayIso}
                 users={users}
@@ -261,7 +267,10 @@ export default function App() {
                 currentUser={currentUser}
                 cal={cal}
                 currentMonthLabel={currentMonthLabel}
+                cm={cm}
+                cy={cy}
                 setCm={setCm}
+                setCy={setCy}
                 users={users}
                 shiftPatterns={shiftPatterns}
                 setShiftPatterns={setShiftPatterns}
@@ -276,7 +285,10 @@ export default function App() {
                 isActive={activePage === 'shift-edit'}
                 cal={cal}
                 currentMonthLabel={currentMonthLabel}
+                cm={cm}
+                cy={cy}
                 setCm={setCm}
+                setCy={setCy}
                 users={users}
                 shifts={shifts}
                 setShifts={setShifts}
