@@ -8,6 +8,9 @@ export const toTaskViewModel = (taskDoc) => ({
   xp: parseInt(taskDoc.xp, 10) || 0,
   st: taskDoc.status || 'pending',
   inPool: taskDoc.is_gacha_target || false,
+  // assign fields (if present) — convert to numbers when possible
+  to: taskDoc.to !== undefined && taskDoc.to !== null ? (Number.isFinite(Number(taskDoc.to)) ? Number(taskDoc.to) : taskDoc.to) : null,
+  by: taskDoc.by !== undefined && taskDoc.by !== null ? (Number.isFinite(Number(taskDoc.by)) ? Number(taskDoc.by) : taskDoc.by) : null,
 });
 
 export const buildTaskInsertPayload = (body = {}) => ({
@@ -17,6 +20,9 @@ export const buildTaskInsertPayload = (body = {}) => ({
   priority: (body.pri || 'mid').toUpperCase(),
   status: body.st || 'pending',
   is_gacha_target: body.inPool || false,
+  // allow optional assignment on create
+  to: body.to !== undefined ? body.to : undefined,
+  by: body.by !== undefined ? body.by : undefined,
   created_at: new Date(),
 });
 
@@ -28,6 +34,9 @@ export const buildTaskUpdatePayload = (body = {}) => {
     priority: body.pri ? body.pri.toUpperCase() : undefined,
     status: body.st,
     is_gacha_target: body.inPool,
+    // support updating assignee fields
+    to: body.to !== undefined ? body.to : undefined,
+    by: body.by !== undefined ? body.by : undefined,
   };
 
   Object.keys(updateData).forEach((key) => updateData[key] === undefined && delete updateData[key]);
