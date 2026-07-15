@@ -41,7 +41,6 @@ export function ShiftView({ isActive, isMgr, isStf, onOpenShiftRequest, onOpenSh
   const [activeTab, setActiveTab] = useState<ShiftAssignment>('hall');
   const [selectedDate, setSelectedDate] = useState<string>(todayIso);
   const [showPdfPopup, setShowPdfPopup] = useState(false);
-
   const pdfMonthInfo = useMemo(() => {
     const firstDayCell = cal?.cells.find((cell: any) => cell.type === 'day' && typeof cell.dateKey === 'string');
     if (firstDayCell && typeof firstDayCell.dateKey === 'string') {
@@ -64,7 +63,7 @@ export function ShiftView({ isActive, isMgr, isStf, onOpenShiftRequest, onOpenSh
       cells: pdfDays.map((day) => {
         const dateKey = `${year}-${pad(month)}-${pad(day)}`;
         const dayShifts = shifts.filter((shift) => shift.uid === user.id && shift.date === dateKey && shift.st === 'confirmed' && !shift.isOff);
-        return dayShifts.length > 0 ? dayShifts.map((shift) => `${shift.s}-${shift.e}`).join(', ') : '';
+        return dayShifts.length > 0 ? dayShifts.map((shift) => `${shift.s}-${shift.e}`).join(', ') : '休';
       }),
     }));
   }, [pdfUsers, pdfDays, pdfMonthInfo, shifts]);
@@ -236,7 +235,7 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
                     <tr key={row.user.id}>
                       <td>{row.user.name}</td>
                       {row.cells.map((text, index) => (
-                        <td key={index}>{text || ''}</td>
+                        <td key={index}>{text || '休'}</td>
                       ))}
                     </tr>
                   ))}
