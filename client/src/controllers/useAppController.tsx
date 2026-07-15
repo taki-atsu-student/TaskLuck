@@ -61,6 +61,13 @@ export default function useAppController() {
   const isMgr = normalizedRole === 'manager';
   const isLeadership = normalizedRole === 'manager';
   const isStf = currentUser && (normalizedRole === 'manager' || normalizedRole === 'staff');
+  useEffect(() => {
+    // debug: ロールが正しく正規化されているか確認する
+    // コンソールに出力してログイン時の挙動を追跡します
+    // (リリース前に削除して構いません)
+    // eslint-disable-next-line no-console
+    console.debug('useAppController: currentUser.role=', currentUser?.role, 'normalizedRole=', normalizedRole, 'isMgr=', isMgr, 'isStf=', isStf);
+  }, [currentUser, normalizedRole, isMgr, isStf]);
   const [password, setPassword] = useState<string>('');
 
   const dataHandlers = createDataHandlers({
