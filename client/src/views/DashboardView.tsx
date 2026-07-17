@@ -1,5 +1,5 @@
 ﻿import { type ReactNode, useState } from 'react';
-import { Priority, TaskStatus, User, Shift, Task } from '../models';
+import { Priority, TaskStatus, User, Shift, Task, resolveUserRole } from '../models';
 
 type DashboardViewProps = {
   isActive: boolean;
@@ -17,9 +17,28 @@ type DashboardViewProps = {
 export function DashboardView({ isActive, isMgr, currentUser, dsObj, tasks, todayShifts, dashTasks, statusBadge, priorityBadge, users }: DashboardViewProps) {
   const [rankingTab, setRankingTab] = useState<'xp' | 'completed'>('xp');
 
+  const getLevelProgress = (xp: number) => {
+    let level = 1;
+    let remainingXp = xp;
+    let xpForNextLevel = 100;
+
+    while (remainingXp >= xpForNextLevel) {
+      remainingXp -= xpForNextLevel;
+      level += 1;
+      xpForNextLevel = Math.round(100 * Math.pow(1.1, level - 1));
+    }
+
+    return {
+      level,
+      xpIntoLevel: remainingXp,
+      xpForNextLevel,
+      progressPct: xpForNextLevel > 0 ? Math.round((remainingXp / xpForNextLevel) * 100) : 100,
+    };
+  };
+
   const getRankingData = (tab: 'xp' | 'completed') => {
     // アルバイト（part）ユーザーのみでランキングを作成
-    const partUsers = users.filter((user) => user.role === 'part');
+    const partUsers = users.filter((user) => resolveUserRole(user) === 'part');
     const ranking = partUsers.map((user) => {
       const completedTasks = tasks.filter((t) => t.to === user.id && t.st === 'done').length;
       return {
@@ -42,7 +61,7 @@ export function DashboardView({ isActive, isMgr, currentUser, dsObj, tasks, toda
   const completedScaleMax = Math.max(maxCompleted, 1);
 
   const allCompletedTasks = tasks.filter((t) => t.st === 'done').length;
-  const taskCompletionRate = tasks.length > 0 ? Math.round((allCompletedTasks / tasks.length) * 100) : 0;
+  const taskCompletionRate = tasks.length > 0 ? Math.round((allCompletedTasks / tasks.length) * 100) : 100;
   const isStaff = currentUser?.role === 'staff';
   const isPart = currentUser?.role === 'part';
 
@@ -60,14 +79,16 @@ export function DashboardView({ isActive, isMgr, currentUser, dsObj, tasks, toda
     }
 
     if (isPart) {
+      const levelProgress = getLevelProgress(currentUser?.xp ?? 0);
+
       return (
         <div className="stats" id="ds">
-          <div className="sc"><div className="sl">レベル</div><div className="sv">Lv.{Math.floor((currentUser?.xp ?? 0) / 100) + 1}</div></div>
+          <div className="sc"><div className="sl">レベル</div><div className="sv">Lv.{levelProgress.level}</div></div>
           <div className="sc"><div className="sl">合計 XP</div><div className="sv">{currentUser?.xp ?? 0}</div></div>
           <div className="sc">
             <div className="sl">次LVまで</div>
-            <div className="sv" style={{ fontSize: '16px' }}>{(currentUser?.xp ?? 0) % 100}<span style={{ fontSize: '11px', color: '#aaa' }}>/100</span></div>
-            <div className="xp-wrap"><div className="xp-bar" style={{ width: `${(currentUser?.xp ?? 0) % 100}%` }} /></div>
+            <div className="sv" style={{ fontSize: '16px' }}>{levelProgress.xpIntoLevel}<span style={{ fontSize: '11px', color: '#aaa' }}>/{levelProgress.xpForNextLevel}</span></div>
+            <div className="xp-wrap"><div className="xp-bar" style={{ width: `${Math.min(levelProgress.progressPct, 100)}%` }} /></div>
           </div>
         </div>
       );

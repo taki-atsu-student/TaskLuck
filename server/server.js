@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import serverless from 'serverless-http';
+import mongoose from 'mongoose'; 
+
+dotenv.config();
+
 import { connectDatabase } from './src/config/database.js';
 import taskRoutes from './src/routes/tasks.js';
 import usersRoutes from './src/routes/users.js';
@@ -14,17 +19,18 @@ import gachaSettingsRoutes from './src/routes/gacha-settings.js';
 import approvalRoutes from './src/routes/approval.js';
 import notificationsRoutes from './src/routes/notifications.js';
 
-dotenv.config();
-
 const app = express();
 const port = 5001;
 
-// 【重要】これがないとPOSTのJSONを受け取れません
-app.use(express.json()); 
+app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
-// ルートの設定
+app.use(async(req, res, next) => {
+  await initDatabase();
+  next();
+});
+
 app.use('/api/tasks', taskRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/shifts', shiftsRoutes);
@@ -36,25 +42,57 @@ app.use('/api/gacha-settings', gachaSettingsRoutes);
 app.use('/api/approval', approvalRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
-// エラーをターミナルに強制表示するミドルウェア（必ずルーティングの設定より下に書いてください）
 app.use((err, req, res, next) => {
   console.error("====== サーバーエラー発生！！ ======");
-  console.error(err.stack); // これでエラーの具体的な場所（行数）がわかります
+  console.error(err.stack);
   console.error("====================================");
   res.status(500).json({ error: err.message });
 });
 
-// サーバー起動処理
-const startServer = async () => {
+const autoRegisterMonthlyTasks = async () => {
   try {
-    await connectDatabase();
+    const Task = mongoose.model('Task');
+    const defaultTasks = [
+      { task_name: "月頭の全体ミーティング準備", description: "資料の印刷と部屋の確保", xp: 150 },
+      { task_name: "定期大掃除（床ワックス掛け）", description: "フロア全体の清掃とワックスがけ作業", xp: 300 },
+      { task_name: "在庫棚卸し・発注作業", description: "全商品の在庫数をカウントしてシステムに入力", xp: 200 }
+    ];
+    await Task.insertMany(defaultTasks);
   } catch (error) {
-    console.warn('MongoDB connection was not established:', error.message);
+    console.error("❌ 【定期バッチ】エラー:", error.message);
   }
-
-  app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-  });
 };
 
-startServer();
+let isConnected = false;
+const initDatabase = async () => {
+  if (isConnected) return;
+  try {
+    await connectDatabase();
+    isConnected = true;
+    console.log("MongoDB connection established successfully.");
+  } catch (error) {
+    console.error('❌ MongoDB connection failed:', error.message);
+    throw error; 
+  }
+};
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`http://localhost:${port}`);
+  });
+
+  initDatabase().catch(err => {
+    console.warn("⚠️ MongoDB接続待機中:", err.message);
+  });
+}
+
+const serverlessHandler = serverless(app);
+
+export const handler = async (event, context) => {
+  await initDatabase();
+  if (event.source === 'aws.events' || event['detail-type'] === 'Scheduled Event') {
+    await autoRegisterMonthlyTasks();
+    return { status: "success", message: "Monthly batch executed successfully" };
+  }
+  return await serverlessHandler(event, context);
+};

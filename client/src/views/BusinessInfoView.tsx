@@ -7,6 +7,7 @@ type BusinessInfoViewProps = {
   updateBusinessInfo: (updater: (prev: BusinessInfo) => BusinessInfo) => void;
   resetBusinessInfo: () => void;
   toast: (message: string) => void;
+  onSave: () => Promise<void>;
 };
 
 const BUSINESS_DAYS: Array<{ key: BusinessDayKey; label: string; short: string }> = [
@@ -35,7 +36,7 @@ const StoreIcon = ({ type }: { type: 'users' | 'clock' | 'calendar' | 'edit' | '
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>;
 };
 
-export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, resetBusinessInfo, toast }: BusinessInfoViewProps) {
+export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, resetBusinessInfo, toast, onSave }: BusinessInfoViewProps) {
   const [newSpecialDate, setNewSpecialDate] = useState('2024-08-15');
 
   const updateSlot = (slotId: string, field: 'weekday' | 'holiday', value: number) => {
@@ -44,6 +45,9 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
       timeSlotStaffing: prev.timeSlotStaffing.map((slot) => slot.id === slotId ? { ...slot, [field]: Math.max(0, value || 0) } : slot),
     }));
   };
+
+  const firstTimeSlots = businessInfo.timeSlotStaffing.filter((slot) => Number(slot.id) < 15);
+  const secondTimeSlots = businessInfo.timeSlotStaffing.filter((slot) => Number(slot.id) >= 15);
 
   const updateClosed = (key: BusinessDayKey, closed: boolean) => {
     updateBusinessInfo((prev) => ({
@@ -89,7 +93,9 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
     toast('特別設定を削除しました');
   };
 
-  const saveSettings = () => toast('店舗設定を保存しました');
+  const saveSettings = async () => {
+    await onSave();
+  };
   const cancelSettings = () => {
     resetBusinessInfo();
     toast('店舗設定をキャンセルしました');
@@ -112,14 +118,10 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
           <div className="store-section-icon"><StoreIcon type="clock" /></div>
           <div>
             <h2>勤務ルール設定</h2>
-            <p>休憩・最大勤務時間・連勤日数・最低人数を設定します。</p>
+            <p>最大勤務時間・連勤日数・最低人数を設定します。</p>
           </div>
         </div>
         <div className="rules-grid">
-          <label>
-            <span>休憩時間（分）</span>
-            <input type="number" min={0} value={businessInfo.requiredBreakMinutes} onChange={(event) => updateRule('requiredBreakMinutes', Number(event.target.value))} />
-          </label>
           <label>
             <span>最大勤務時間（時間）</span>
             <input type="number" min={0} value={businessInfo.maxWorkHours} onChange={(event) => updateRule('maxWorkHours', Number(event.target.value))} />
@@ -144,28 +146,54 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
           </div>
         </div>
         <div className="staffing-scroll">
-          <table className="staffing-grid">
-            <thead>
-              <tr>
-                <th></th>
-                {businessInfo.timeSlotStaffing.map((slot) => <th key={slot.id}>{slot.label}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th>平日</th>
-                {businessInfo.timeSlotStaffing.map((slot) => (
-                  <td key={`weekday-${slot.id}`}><input type="number" min={0} value={slot.weekday} onChange={(event) => updateSlot(slot.id, 'weekday', Number(event.target.value))} /></td>
-                ))}
-              </tr>
-              <tr>
-                <th>休日</th>
-                {businessInfo.timeSlotStaffing.map((slot) => (
-                  <td key={`holiday-${slot.id}`}><input type="number" min={0} value={slot.holiday} onChange={(event) => updateSlot(slot.id, 'holiday', Number(event.target.value))} /></td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
+          <div className="staffing-part">
+            <table className="staffing-grid">
+              <thead>
+                <tr>
+                  <th></th>
+                  {firstTimeSlots.map((slot) => <th key={slot.id}>{slot.label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th>平日</th>
+                  {firstTimeSlots.map((slot) => (
+                    <td key={`weekday-${slot.id}`}><input type="number" min={0} value={slot.weekday} onChange={(event) => updateSlot(slot.id, 'weekday', Number(event.target.value))} /></td>
+                  ))}
+                </tr>
+                <tr>
+                  <th>休日</th>
+                  {firstTimeSlots.map((slot) => (
+                    <td key={`holiday-${slot.id}`}><input type="number" min={0} value={slot.holiday} onChange={(event) => updateSlot(slot.id, 'holiday', Number(event.target.value))} /></td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="staffing-part">
+            <table className="staffing-grid">
+              <thead>
+                <tr>
+                  <th></th>
+                  {secondTimeSlots.map((slot) => <th key={slot.id}>{slot.label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th>平日</th>
+                  {secondTimeSlots.map((slot) => (
+                    <td key={`weekday-${slot.id}`}><input type="number" min={0} value={slot.weekday} onChange={(event) => updateSlot(slot.id, 'weekday', Number(event.target.value))} /></td>
+                  ))}
+                </tr>
+                <tr>
+                  <th>休日</th>
+                  {secondTimeSlots.map((slot) => (
+                    <td key={`holiday-${slot.id}`}><input type="number" min={0} value={slot.holiday} onChange={(event) => updateSlot(slot.id, 'holiday', Number(event.target.value))} /></td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <div className="min-staff-save"><button className="store-btn store-btn-green" type="button" onClick={saveSettings}>保存</button></div>
       </section>
@@ -223,8 +251,8 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
                   <option value="specialClosed">{SPECIAL_TYPE_LABELS.specialClosed}</option>
                   <option value="shortHours">{SPECIAL_TYPE_LABELS.shortHours}</option>
                 </select>
-                <input type="text" value={rule.time} onChange={(event) => updateSpecialRule(rule.id, 'time', event.target.value)} placeholder="-" />
-                <input type="text" value={rule.note} onChange={(event) => updateSpecialRule(rule.id, 'note', event.target.value)} placeholder="備考" />
+                <input type="text" value={rule.time} onChange={(event) => updateSpecialRule(rule.id, 'time', event.target.value)} placeholder="例: 10:00-17:00" />
+                <input type="text" value={rule.note} onChange={(event) => updateSpecialRule(rule.id, 'note', event.target.value)} placeholder="例: 盆休み" />
                 <div className="special-actions">
                   <button type="button" aria-label="編集"><StoreIcon type="edit" /></button>
                   <button type="button" aria-label="削除" onClick={() => deleteSpecialRule(rule.id)}><StoreIcon type="trash" /></button>

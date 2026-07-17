@@ -1,6 +1,5 @@
-import React, { useState } from "react";
-import { Dispatch, SetStateAction } from "react";
-import { User, ShiftPattern } from "../models";
+import React, { Dispatch, SetStateAction, useState } from "react";
+import { User, ShiftPattern, BusinessInfo, BusinessDayKey } from "../models";
 
 type CalCell = {
   type: "prev" | "day" | "next";
@@ -28,7 +27,10 @@ interface ShiftRequestScreenProps {
   currentUser: User;
   cal: Cal;
   currentMonthLabel: string;
+  cm: number;
+  cy: number;
   setCm: Dispatch<SetStateAction<number>>;
+  setCy: Dispatch<SetStateAction<number>>;
   users: User[];
   shiftPatterns: ShiftPattern[];
   setShiftPatterns: Dispatch<SetStateAction<ShiftPattern[]>>;
@@ -36,9 +38,10 @@ interface ShiftRequestScreenProps {
   setReqDate: (value: string) => void;
   onSubmit: (entries: ShiftRequestEntry[]) => void;
   onCancel: () => void;
+  businessInfo: BusinessInfo;
 }
 
-const CLOSED_DOW = 2;
+const DOW_TO_KEY: BusinessDayKey[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 const PALETTE = [
   { bg: "#dcfce7", fg: "#15803d" },
@@ -53,7 +56,10 @@ export default function ShiftRequestScreen({
   currentUser,
   cal,
   currentMonthLabel,
+  cm,
+  cy,
   setCm,
+  setCy,
   users,
   shiftPatterns,
   setShiftPatterns,
@@ -61,6 +67,7 @@ export default function ShiftRequestScreen({
   setReqDate,
   onSubmit,
   onCancel,
+  businessInfo,
 }: ShiftRequestScreenProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [registeredShifts, setRegisteredShifts] = useState<Record<string, number>>({});
@@ -79,7 +86,7 @@ export default function ShiftRequestScreen({
   };
 
   const handleSelectDate = (dateKey: string, dow: number) => {
-    if (dow === CLOSED_DOW) return;
+    if (businessInfo.regularClosedDays.includes(DOW_TO_KEY[dow])) return;
     setSelectedDate((prev) => (prev === dateKey ? null : dateKey));
     setReqDate(dateKey);
   };
@@ -145,6 +152,25 @@ export default function ShiftRequestScreen({
 
   const submitCount = Object.keys(registeredShifts).length;
 
+  const navigateMonth = (direction: -1 | 1) => {
+    if (direction === -1) {
+      if (cm === 0) {
+        setCm(11);
+        setCy((year) => (year > 1980 ? year - 1 : 1980));
+      } else {
+        setCm(cm - 1);
+      }
+      return;
+    }
+
+    if (cm === 11) {
+      setCm(0);
+      setCy((year) => year + 1);
+    } else {
+      setCm(cm + 1);
+    }
+  };
+
   return (
     <div className={`page ${isActive ? "show" : ""}`} id="pg-shift-request">
       <style>{`
@@ -152,8 +178,8 @@ export default function ShiftRequestScreen({
         .sr-cell.sel { box-shadow: 0 0 0 2px #4b9be0; background: transparent !important; }
         .sr-cell.closed { background: #dcf6e5 !important; cursor: default; }
         .sr-cell.closed:hover { background: #dcf6e5 !important; }
-        .sr-shift { position: relative; display: flex; align-items: center; justify-content: center; margin-top: 4px; font-size: 10px; font-weight: 600; border-radius: 5px; padding: 3px 5px; line-height: 1.2; }
-        .sr-x { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border: none; border-radius: 50%; background: #1d1d1f; color: #fff; font-size: 11px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .12s; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .sr-shift { display: flex; align-items: center; justify-content: center; margin-top: 4px; font-size: 10px; font-weight: 600; border-radius: 5px; padding: 3px 5px; line-height: 1.2; width: 100%; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sr-x { position: absolute; top: 2px; right: 2px; width: 14px; height: 14px; border: none; border-radius: 50%; background: #1d1d1f; color: #fff; font-size: 10px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity .12s; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 1; }
         .sr-cell:hover .sr-x { opacity: 1; }
         .sr-x:hover { background: #d8413f; }
       `}</style>
@@ -185,7 +211,7 @@ export default function ShiftRequestScreen({
               <button
                 className="btn btn-sm"
                 type="button"
-                onClick={() => setCm((prev) => (prev - 1 < 0 ? 11 : prev - 1))}
+                onClick={() => navigateMonth(-1)}
               >
                 ‹‹
               </button>
@@ -193,7 +219,7 @@ export default function ShiftRequestScreen({
               <button
                 className="btn btn-sm"
                 type="button"
-                onClick={() => setCm((prev) => (prev + 1 > 11 ? 0 : prev + 1))}
+                onClick={() => navigateMonth(1)}
               >
                 ››
               </button>
@@ -218,7 +244,7 @@ export default function ShiftRequestScreen({
                 }
 
                 const dow = cell.dateKey ? new Date(cell.dateKey).getDay() : -1;
-                const closed = dow === CLOSED_DOW;
+                const closed = dow >= 0 && businessInfo.regularClosedDays.includes(DOW_TO_KEY[dow]);
                 const isSel = cell.dateKey === selectedDate;
                 const pid = cell.dateKey ? registeredShifts[cell.dateKey] : undefined;
                 const pattern = pid != null ? shiftPatterns.find((p) => p.id === pid) : null;
@@ -297,7 +323,7 @@ export default function ShiftRequestScreen({
                 パターン名
                 <input
                   value={draft.title}
-                  placeholder="例：パターンC"
+                  placeholder="例: パターンC"
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                   style={{ display: "block", width: "100%", marginTop: "4px", border: "1px solid #e7e7ea", borderRadius: "6px", padding: "7px 8px", fontSize: "13px" }}
                 />
@@ -306,7 +332,7 @@ export default function ShiftRequestScreen({
                 メモ
                 <input
                   value={draft.memo}
-                  placeholder="例：早番"
+                  placeholder="例: 早番"
                   onChange={(e) => setDraft({ ...draft, memo: e.target.value })}
                   style={{ display: "block", width: "100%", marginTop: "4px", border: "1px solid #e7e7ea", borderRadius: "6px", padding: "7px 8px", fontSize: "13px" }}
                 />

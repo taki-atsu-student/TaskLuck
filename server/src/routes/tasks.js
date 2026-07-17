@@ -1,27 +1,51 @@
 import express from 'express';
+import mongoose from 'mongoose'; 
 import { 
   getTasks, 
   createTask, 
-  updateTask,   // これらはコントローラーでexportされている前提です
+  updateTask,   
   deleteTask, 
   getAvailableTasks 
 } from '../controllers/taskController.js';
 
 const router = express.Router();
 
-// 1. タスク一覧取得 (GET /api/tasks)
 router.get('/', getTasks);
 
-// 2. ガチャ用：プール内のタスク取得 (GET /api/tasks/available)
+router.post('/submit/:assignmentId', async (req, res, next) => {
+  try {
+    const { assignmentId } = req.params;
+    const Task = mongoose.model('Task');
+    const NotificationModel = mongoose.model('Notification');
+    const taskIdNum = Number(assignmentId);
+
+    const existingNotification = await NotificationModel.findOne({ taskId: taskIdNum });
+    if (existingNotification) {
+      return res.json({ success: true, status: 'review', id: taskIdNum });
+    }
+
+    const targetTask = await Task.findOne({ id: taskIdNum });
+    const taskName = targetTask ? (targetTask.name || targetTask.task_name) : "定番タスク";
+
+    await NotificationModel.create({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      title: 'タスク完了報告があります',
+      sub: `「${taskName}」の完了報告が届いています`,
+      read: false,
+      uid: 1, 
+      taskId: taskIdNum,
+    });
+
+    res.json({ success: true, status: 'review', id: taskIdNum });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/available', getAvailableTasks);
-
-// 3. タスク作成 (POST /api/tasks)
 router.post('/', createTask);
-
-// 4. タスク更新 (PUT /api/tasks/:id)
 router.put('/:id', updateTask);
-
-// 5. タスク削除 (DELETE /api/tasks/:id)
 router.delete('/:id', deleteTask);
 
 export default router;

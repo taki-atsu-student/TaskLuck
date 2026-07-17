@@ -1,5 +1,39 @@
 export type Role = 'manager' | 'staff' | 'part';
+
+export const normalizeRole = (role?: string | null): Role => {
+  const normalized = String(role ?? '').trim().toLowerCase();
+  if (normalized === 'manager' || normalized === 'staff' || normalized === 'part') {
+    return normalized;
+  }
+
+  if (normalized === 'admin') {
+    return 'manager';
+  }
+
+  return 'staff';
+};
+
+export const resolveUserRole = (user: { role?: string | null; hourlyWage?: number | null; monthlySalary?: number | null }): Role => {
+  const normalized = normalizeRole(user.role);
+  if (normalized === 'manager') {
+    return normalized;
+  }
+
+  const hourlyWage = Number(user.hourlyWage ?? 0);
+  const monthlySalary = Number(user.monthlySalary ?? 0);
+
+  if (hourlyWage > 0 && monthlySalary <= 0) {
+    return 'part';
+  }
+
+  if (monthlySalary > 0 && hourlyWage <= 0) {
+    return 'staff';
+  }
+
+  return normalized === 'part' ? 'part' : 'staff';
+};
 export type ShiftStatus = 'confirmed' | 'request';
+export type ShiftAssignment = 'hall' | 'kitchen';
 export type TaskStatus = 'pending' | 'in_progress' | 'review' | 'done';
 export type Priority = 'high' | 'mid' | 'low';
 
@@ -13,6 +47,7 @@ export interface ExtraWage {
 export interface User {
   id: number;
   name: string;
+  username: string;
   role: Role;
   xp: number;
   ini: string;
@@ -30,6 +65,7 @@ export interface Shift {
   e: string;
   st: ShiftStatus;
   isOff?: boolean;
+  assignments?: ShiftAssignment[];
 }
 
 export interface ShiftPattern {
@@ -57,8 +93,6 @@ export interface GachaLog {
   name: string;
   xp: number;
   timestamp?: number;
-  rarity?: string;
-  rkey?: string;
   time?: string;
 }
 
@@ -139,6 +173,10 @@ export const BUSINESS_INFO_INITIAL: BusinessInfo = {
     holiday: { normal: 4, busy: 5 },
   },
   timeSlotStaffing: [
+    { id: '6', label: '6:00 - 7:00', weekday: 0, holiday: 0 },
+    { id: '7', label: '7:00 - 8:00', weekday: 0, holiday: 0 },
+    { id: '8', label: '8:00 - 9:00', weekday: 0, holiday: 0 },
+    { id: '9', label: '9:00 - 10:00', weekday: 0, holiday: 0 },
     { id: '10', label: '10:00 - 11:00', weekday: 2, holiday: 3 },
     { id: '11', label: '11:00 - 12:00', weekday: 3, holiday: 4 },
     { id: '12', label: '12:00 - 13:00', weekday: 3, holiday: 4 },
@@ -149,6 +187,10 @@ export const BUSINESS_INFO_INITIAL: BusinessInfo = {
     { id: '17', label: '17:00 - 18:00', weekday: 0, holiday: 0 },
     { id: '18', label: '18:00 - 19:00', weekday: 0, holiday: 0 },
     { id: '19', label: '19:00 - 20:00', weekday: 0, holiday: 0 },
+    { id: '20', label: '20:00 - 21:00', weekday: 0, holiday: 0 },
+    { id: '21', label: '21:00 - 22:00', weekday: 0, holiday: 0 },
+    { id: '22', label: '22:00 - 23:00', weekday: 0, holiday: 0 },
+    { id: '23', label: '23:00 - 24:00', weekday: 0, holiday: 0 },
   ],
   specialRules: [
     { id: 1, date: '2024-08-15', type: 'specialClosed', time: '-', note: 'お盆休み' },
@@ -156,34 +198,4 @@ export const BUSINESS_INFO_INITIAL: BusinessInfo = {
     { id: 3, date: '2024-12-24', type: 'shortHours', time: '10:00-17:00', note: 'クリスマス' },
   ],
 };
-export const USERS_INITIAL: User[] = [
-  { id: 1, name: '田中 店長', role: 'manager', xp: 0, ini: '田', password: 'pass0001', monthlySalary: 350010 },
-  { id: 2, name: '佐藤 花子', role: 'staff', xp: 320, ini: '佐', password: 'pass0002', monthlySalary: 250010 },
-  { id: 3, name: '鈴木 一郎', role: 'part', xp: 180, ini: '鈴', password: 'pass0003', hourlyWage: 1100 },
-  { id: 4, name: '高橋 美咲', role: 'part', xp: 90, ini: '高', password: 'pass0004', hourlyWage: 1050 },
-  { id: 5, name: '山田 健太', role: 'part', xp: 230, ini: '山', password: 'pass0005', hourlyWage: 1100 },
-];
 
-export const SHIFTS_INITIAL: Shift[] = [
-  { id: 1, uid: 3, date: '2025-06-09', s: '10:00', e: '17:00', st: 'confirmed' },
-  { id: 2, uid: 4, date: '2025-06-09', s: '11:00', e: '18:00', st: 'confirmed' },
-  { id: 3, uid: 5, date: '2025-06-09', s: '13:00', e: '20:00', st: 'confirmed' },
-  { id: 4, uid: 2, date: '2025-06-10', s: '09:00', e: '17:00', st: 'confirmed' },
-  { id: 5, uid: 3, date: '2025-06-11', s: '10:00', e: '17:00', st: 'request' },
-  { id: 6, uid: 4, date: '2025-06-14', s: '12:00', e: '19:00', st: 'confirmed' },
-  { id: 7, uid: 5, date: '2025-06-16', s: '10:00', e: '16:00', st: 'confirmed' },
-];
-
-export const TASKS_INITIAL: Task[] = [
-  { id: 1, name: '在庫チェック（飲料）', desc: '冷蔵庫・棚の在庫を確認', pri: 'high', xp: 80, st: 'pending', to: null, by: 1 },
-  { id: 2, name: 'フロア清掃', desc: '開店前にフロア全体を拭き掃除', pri: 'mid', xp: 50, st: 'in_progress', to: 3, by: 1 },
-  { id: 3, name: '陳列棚の整理', desc: '商品を正しい位置に戻す', pri: 'low', xp: 40, st: 'review', to: 4, by: 2 },
-  { id: 4, name: 'バックヤード片付け', desc: '段ボールをまとめて廃棄場所へ', pri: 'mid', xp: 60, st: 'pending', to: null, by: 1 },
-  { id: 5, name: 'レジ補充', desc: 'つり銭用コインの補充', pri: 'high', xp: 70, st: 'done', to: 5, by: 2 },
-  { id: 6, name: '窓ふき', desc: '店舗入口の窓を清掃', pri: 'low', xp: 40, st: 'pending', to: null, by: 1 },
-];
-
-export const SHIFT_PATTERNS_INITIAL: ShiftPattern[] = [
-  { id: 1, title: 'パターンA', workStart: '17:00', workEnd: '21:00', breakTime: 0, memo: '平日用' },
-  { id: 2, title: 'パターンB', workStart: '13:00', workEnd: '21:00', breakTime: 60, memo: '休日用' },
-];
