@@ -21,7 +21,6 @@ router.post('/submit/:assignmentId', async (req, res, next) => {
 
     const existingNotification = await NotificationModel.findOne({ taskId: taskIdNum });
     if (existingNotification) {
-      console.log(`⚠️ [連打無視] タスクID: ${taskIdNum}`);
       return res.json({ success: true, status: 'review', id: taskIdNum });
     }
 
@@ -37,7 +36,6 @@ router.post('/submit/:assignmentId', async (req, res, next) => {
       taskId: taskIdNum,
     });
 
-    console.log(`🎉 [処理成功] タスクID: ${taskIdNum}`);
     res.json({ success: true, status: 'review', id: taskIdNum });
 
   } catch (error) {

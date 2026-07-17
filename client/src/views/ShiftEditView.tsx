@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from 'react';
 import { Shift, ShiftAssignment, User, BusinessInfo, BusinessDayKey } from '../models';
 import { ShiftGanttChart, START_MIN, END_MIN, TOTAL_MIN, STEP_MIN, toMin, toTime, roundStep } from '../components/ShiftGanttChart';
 
@@ -8,7 +8,10 @@ type ShiftEditViewProps = {
   isActive: boolean;
   cal: CalendarData;
   currentMonthLabel: string;
-  setCm: (fn: (prev: number) => number) => void;
+  cm: number;
+  cy: number;
+  setCm: Dispatch<SetStateAction<number>>;
+  setCy: Dispatch<SetStateAction<number>>;
   users: User[];
   shifts: Shift[];
   setShifts: (fn: (prev: Shift[]) => Shift[]) => void;
@@ -27,7 +30,7 @@ const HOLIDAYS = new Set([
   '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06','2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03'
 ]);
 
-export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates, businessInfo }: ShiftEditViewProps) {
+export default function ShiftEditView({ isActive, cal, currentMonthLabel, cm, cy, setCm, setCy, users, shifts, setShifts, todayIso, toast, onBack, understaffedDates, businessInfo }: ShiftEditViewProps) {
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editShifts, setEditShifts] = useState<Shift[]>(shifts);
@@ -41,24 +44,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
   const [deleteTarget, setDeleteTarget] = useState<Shift | null>(null);
 
   const displayUsers = useMemo(() => {
-    const base = users.length ? users : [];
-    const fallback: User[] = [
-      { id: 9001, name: '山田 健太', role: 'part', xp: 0, ini: '山', password: '' },
-      { id: 9002, name: '佐藤 花子', role: 'staff', xp: 0, ini: '佐', password: '' },
-      { id: 9003, name: '田中 翔', role: 'part', xp: 0, ini: '田', password: '' },
-      { id: 9004, name: '中村 葵', role: 'part', xp: 0, ini: '中', password: '' },
-      { id: 9005, name: '伊藤 優', role: 'part', xp: 0, ini: '伊', password: '' },
-      { id: 9006, name: '小林 拓', role: 'staff', xp: 0, ini: '小', password: '' },
-      { id: 9007, name: '加藤 美咲', role: 'part', xp: 0, ini: '加', password: '' },
-      { id: 9008, name: '渡辺 蓮', role: 'part', xp: 0, ini: '渡', password: '' },
-      { id: 9009, name: '松本 結衣', role: 'part', xp: 0, ini: '松', password: '' },
-      { id: 9010, name: '井上 陽太', role: 'part', xp: 0, ini: '井', password: '' },
-    ];
-    const merged = [...base];
-    fallback.forEach((user) => {
-      if (merged.length < 10 && !merged.some((item) => item.name === user.name)) merged.push(user);
-    });
-    return merged.slice(0, 10);
+    return users;
   }, [users]);
 
   const tabUsers = useMemo((): Record<ShiftAssignment, User[]> => ({
@@ -210,6 +196,25 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
     toast('シフトを追加しました');
   };
 
+  const navigateMonth = (direction: -1 | 1) => {
+    if (direction === -1) {
+      if (cm === 0) {
+        setCm(11);
+        setCy((year) => (year > 1980 ? year - 1 : 1980));
+      } else {
+        setCm(cm - 1);
+      }
+      return;
+    }
+
+    if (cm === 11) {
+      setCm(0);
+      setCy((year) => year + 1);
+    } else {
+      setCm(cm + 1);
+    }
+  };
+
   const autoCreate = () => {
     const monthDates = (cal?.cells ?? [])
       .filter((cell) => cell.type !== 'prev' && cell.type !== 'next')
@@ -266,9 +271,9 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
         {cal ? (
           <>
             <div className="cal-nav">
-              <button className="btn btn-sm" type="button" onClick={() => setCm((prev) => prev - 1 < 0 ? 11 : prev - 1)}>‹‹</button>
+              <button className="btn btn-sm" type="button" onClick={() => navigateMonth(-1)}>‹‹</button>
               <span className="cal-month">{currentMonthLabel}</span>
-              <button className="btn btn-sm" type="button" onClick={() => setCm((prev) => prev + 1 > 11 ? 0 : prev + 1)}>››</button>
+              <button className="btn btn-sm" type="button" onClick={() => navigateMonth(1)}>››</button>
             </div>
             <div className="cal-grid shift-edit-cal">
               {cal.dayNames.map((dn, i) => (
@@ -345,7 +350,7 @@ export default function ShiftEditView({ isActive, cal, currentMonthLabel, setCm,
         <div className="modal">
           <h3>メモ入力</h3>
           <div className="mfg"><label>日付</label><input type="text" value={memoDate} readOnly /></div>
-          <div className="mfg"><label>メモ</label><textarea rows={4} value={memoText} onChange={(event) => setMemoText(event.target.value)} placeholder="メモを入力" /></div>
+          <div className="mfg"><label>メモ</label><textarea rows={4} value={memoText} onChange={(event) => setMemoText(event.target.value)} placeholder="メモを入力してください" /></div>
           <div className="mf">
             <button className="btn" type="button" onClick={() => setMemoOpen(false)}>キャンセル</button>
             <button className="btn btn-dark" type="button" onClick={saveMemo}>保存</button>

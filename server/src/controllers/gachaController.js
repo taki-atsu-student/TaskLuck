@@ -1,26 +1,6 @@
 import { getDb } from '../config/database.js';
-
-const RARITY = {
-  N: { key: 'n', label: 'NORMAL', xpMult: 1, prob: 0.45 },
-  R: { key: 'r', label: 'RARE', xpMult: 1.5, prob: 0.28 },
-  SR: { key: 'sr', label: 'SUPER RARE', xpMult: 2, prob: 0.16 },
-  UR: { key: 'ur', label: 'ULTRA RARE', xpMult: 3, prob: 0.08 },
-  L: { key: 'l', label: 'LEGENDARY', xpMult: 5, prob: 0.03 },
-};
-
-const RK_ORDER = ['N', 'R', 'SR', 'UR', 'L'];
 // 💡 DBに大文字(HIGH, MID, LOW)で入るため、ここも大文字に対応させました！
-const PRIORITY_WEIGHTS = { HIGH: 5, MID: 3, LOW: 1, high: 5, mid: 3, low: 1 };
-
-function pickRarity() {
-  let r = Math.random();
-  let acc = 0;
-  for (const k of RK_ORDER) {
-    acc += RARITY[k].prob;
-    if (r < acc) return k;
-  }
-  return 'N';
-}
+const PRIORITY_WEIGHTS = { HIGH: 6, MID: 3, LOW: 1, high: 6, mid: 3, low: 1 };
 
 function pickTask(availableTasks) {
   let total = availableTasks.reduce((acc, t) => acc + (PRIORITY_WEIGHTS[t.priority] || 1), 0);
@@ -41,7 +21,7 @@ export const drawGacha = async (req, res) => {
       return res.status(400).json({ error: 'ユーザーIDが必要です' });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     // 🛠️ 1. 同時引き防止（taskControllerの status と to 列名に統一）
     const existingActiveTask = await db.collection('tasks').findOne({
@@ -67,10 +47,8 @@ export const drawGacha = async (req, res) => {
     }
     
     // 厳正に抽選
-    const rk = pickRarity();
-    const rc = RARITY[rk];
     const chosenTask = pickTask(availableTasks);
-    const chosenXp = Math.round(chosenTask.xp * rc.xpMult);
+    const chosenXp = chosenTask.xp;
 
     // 🛠️ 3. 当たったタスクをDBで更新（status と to に統一）
     await db.collection('tasks').updateOne(
@@ -79,25 +57,22 @@ export const drawGacha = async (req, res) => {
         $set: { 
           status: 'in_progress', 
           to: Number(userId),
-          gachaRarity: rc.label,
           gachaXp: chosenXp      
         } 
       }
     );
 
     // 履歴ログをDBに保存
-    const historyItem = {
+    const gachalogItem = {
       uid: Number(userId),
       name: chosenTask.task_name, // task_nameに統一
       desc: chosenTask.description, // descriptionに統一
-      rarity: rc.label,
-      rkey: rk,
       xp: chosenXp,
       timestamp: Date.now(),
       time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
     };
 
-    await db.collection('gachalog').insertOne(historyItem);
+    await db.collection('gachalog').insertOne(gachalogItem);
 
     // フロントのReactが受け取れる型に形を整えて返却
     return res.json({
@@ -110,10 +85,8 @@ export const drawGacha = async (req, res) => {
         st: 'in_progress',
         inPool: true
       },
-      rarity: rc.label,
-      rarityKey: rk,
       xp: chosenXp,
-      history: historyItem,
+      gachalog: gachalogItem,
     });
 
   } catch (error) {
@@ -122,21 +95,21 @@ export const drawGacha = async (req, res) => {
   }
 };
 
-// 🎯 GET /api/gacha/history - ガチャ履歴取得（DBから取得）
-export const getGachaHistory = async (req, res) => {
+// 🎯 GET /api/gacha/gachalog - ガチャ履歴取得（DBから取得）
+export const getGachaLog = async (req, res) => {
   try {
-    const db = getDb();
-    const history = await db.collection('gachalog').find().sort({ timestamp: -1 }).toArray();
-    res.json(history);
+    const db = await getDb();
+    const gachalog = await db.collection('gachalog').find().sort({ timestamp: -1 }).toArray();
+    res.json(gachalog);
   } catch (error) {
     res.status(500).json({ error: '履歴の取得に失敗しました' });
   }
 };
 
-// 🎯 GET /api/gacha/history/count - ガチャ総回数
+// 🎯 GET /api/gacha/gachalog/count - ガチャ総回数
 export const getGachaCount = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const count = await db.collection('gachalog').countDocuments();
     res.json({ count });
   } catch (error) {

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction, useState } from "react";
 import { User, ShiftPattern, BusinessInfo, BusinessDayKey } from "../models";
 
 type CalCell = {
@@ -28,7 +27,10 @@ interface ShiftRequestScreenProps {
   currentUser: User;
   cal: Cal;
   currentMonthLabel: string;
+  cm: number;
+  cy: number;
   setCm: Dispatch<SetStateAction<number>>;
+  setCy: Dispatch<SetStateAction<number>>;
   users: User[];
   shiftPatterns: ShiftPattern[];
   setShiftPatterns: Dispatch<SetStateAction<ShiftPattern[]>>;
@@ -54,7 +56,10 @@ export default function ShiftRequestScreen({
   currentUser,
   cal,
   currentMonthLabel,
+  cm,
+  cy,
   setCm,
+  setCy,
   users,
   shiftPatterns,
   setShiftPatterns,
@@ -147,6 +152,25 @@ export default function ShiftRequestScreen({
 
   const submitCount = Object.keys(registeredShifts).length;
 
+  const navigateMonth = (direction: -1 | 1) => {
+    if (direction === -1) {
+      if (cm === 0) {
+        setCm(11);
+        setCy((year) => (year > 1980 ? year - 1 : 1980));
+      } else {
+        setCm(cm - 1);
+      }
+      return;
+    }
+
+    if (cm === 11) {
+      setCm(0);
+      setCy((year) => year + 1);
+    } else {
+      setCm(cm + 1);
+    }
+  };
+
   return (
     <div className={`page ${isActive ? "show" : ""}`} id="pg-shift-request">
       <style>{`
@@ -187,7 +211,7 @@ export default function ShiftRequestScreen({
               <button
                 className="btn btn-sm"
                 type="button"
-                onClick={() => setCm((prev) => (prev - 1 < 0 ? 11 : prev - 1))}
+                onClick={() => navigateMonth(-1)}
               >
                 ‹‹
               </button>
@@ -195,7 +219,7 @@ export default function ShiftRequestScreen({
               <button
                 className="btn btn-sm"
                 type="button"
-                onClick={() => setCm((prev) => (prev + 1 > 11 ? 0 : prev + 1))}
+                onClick={() => navigateMonth(1)}
               >
                 ››
               </button>
@@ -299,7 +323,7 @@ export default function ShiftRequestScreen({
                 パターン名
                 <input
                   value={draft.title}
-                  placeholder="例：パターンC"
+                  placeholder="例: パターンC"
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                   style={{ display: "block", width: "100%", marginTop: "4px", border: "1px solid #e7e7ea", borderRadius: "6px", padding: "7px 8px", fontSize: "13px" }}
                 />
@@ -308,7 +332,7 @@ export default function ShiftRequestScreen({
                 メモ
                 <input
                   value={draft.memo}
-                  placeholder="例：早番"
+                  placeholder="例: 早番"
                   onChange={(e) => setDraft({ ...draft, memo: e.target.value })}
                   style={{ display: "block", width: "100%", marginTop: "4px", border: "1px solid #e7e7ea", borderRadius: "6px", padding: "7px 8px", fontSize: "13px" }}
                 />

@@ -1,12 +1,26 @@
 import { getDb } from '../config/database.js';
 import { CognitoIdentityProviderClient, AdminCreateUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { logError, logWarn } from '../utils/logger.js';
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: "ap-northeast-1" });
+
+const normalizeRole = (role) => {
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'manager' || value === 'staff' || value === 'part') return value;
+  if (value === 'admin') return 'manager';
+  return 'staff';
+};
+
+const toDbRole = (role) => {
+  const value = normalizeRole(role);
+  if (value === 'manager') return 'MANAGER';
+  return 'STAFF';
+};
 
 // 🎯 1. スタッフ一覧取得 (GET /api/staff)
 export const getStaffList = async (req, res) => {
   try {
-    const db = getDb();
+    const db = await getDb();
     const rawUsers = await db.collection('users').find().toArray();
     
     // 完全版のDB構造 (id, current_xp) をフロントの期待する型に整えて返す
@@ -14,7 +28,7 @@ export const getStaffList = async (req, res) => {
       id: Number(u.id), 
       username: u.username || `user${u.id}`, 
       name: u.name || "",
-      role: (u.role || "STAFF").toLowerCase() === 'manager' ? 'manager' : 'part', // フロントの型 (manager/part/staff) に丸める
+      role: normalizeRole(u.role),
       xp: parseInt(u.current_xp, 10) || 0, // 完全版のフィールド「current_xp」に合わせる
       ini: u.ini || (u.name ? u.name.charAt(0) : "S"),
       password: u.password || ""
@@ -22,7 +36,7 @@ export const getStaffList = async (req, res) => {
 
     res.status(200).json(users);
   } catch (error) {
-    console.error("getStaffListエラー:", error);
+    logError("getStaffListエラー:", error);
     res.status(500).json({ error: "スタッフ一覧の取得に失敗しました" });
   }
 };
@@ -35,7 +49,7 @@ export const createStaff = async (req, res) => {
       return res.status(400).json({ error: "名前を入力してください" });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     // 現在の最大 id を取得して +1（完全版のフィールド「id」に合わせる）
     const lastUser = await db.collection('users').find().sort({ id: -1 }).limit(1).toArray();
@@ -52,16 +66,15 @@ export const createStaff = async (req, res) => {
           Username: username,
           TemporaryPassword: password,
           UserAttributes: [
-            { Name: "custom:role", Value: role || "part" }
+            { Name: "custom:role", Value: normalizeRole(role) }
           ],
           MessageAction: "SUPPRESS"
         };
         
         await cognitoClient.send(new AdminCreateUserCommand(cognitoParams));
-        console.log(`🎉 Amazon Cognitoにユーザーを追加しました: ${username}`);
       }
     } catch (cognitoError) {
-      console.warn("⚠️ Cognitoへの登録をスキップ、または失敗しました:", cognitoError.message);
+      logWarn("⚠️ Cognitoへの登録をスキップ、または失敗しました:", cognitoError.message);
     }
 
     // 完全版 users テーブルのデータ構造に完全準拠させる
@@ -69,9 +82,9 @@ export const createStaff = async (req, res) => {
       id: newId,
       username: username,
       name: name.trim(),
-      email: `${role || 'part'}_${newId}@example.com`,
+      email: null,
       password: password,
-      role: role === 'manager' ? 'MANAGER' : 'STAFF', // DB側は大文字統一
+      role: toDbRole(role), // DB側は大文字統一
       level: 1,
       current_xp: 0,
       next_level_xp: 100,
@@ -89,13 +102,13 @@ export const createStaff = async (req, res) => {
       id: newId,
       username: username,
       name: userData.name,
-      role: role || 'part',
+      role: normalizeRole(role),
       xp: 0,
       ini: userData.ini,
       password: userData.password
     });
   } catch (error) {
-    console.error("createStaffエラー:", error);
+    logError("createStaffエラー:", error);
     res.status(500).json({ error: "スタッフの追加に失敗しました" });
   }
 };
@@ -108,7 +121,7 @@ export const addStaffXp = async (req, res) => {
       return res.status(400).json({ error: "ユーザーIDとXPは必須です" });
     }
 
-    const db = getDb();
+    const db = await getDb();
 
     // 完全版のフィールド「id」と「current_xp」に対して加算を行う
     const result = await db.collection('users').updateOne(
@@ -122,7 +135,7 @@ export const addStaffXp = async (req, res) => {
 
     res.status(200).json({ success: true, message: `+${xp} XP を付与しました` });
   } catch (error) {
-    console.error("addStaffXpエラー:", error);
+    logError("addStaffXpエラー:", error);
     res.status(500).json({ error: "XPの付与に失敗しました" });
   }
 };

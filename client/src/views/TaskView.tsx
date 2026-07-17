@@ -366,8 +366,8 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
                 <div style={{ border: '1px solid #e5e5e5', borderRadius: '8px', padding: '14px', backgroundColor: '#fafafa' }}>
                   <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '10px', color: '#555' }}>XP</div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <input type="number" value={xpMin} min={0} onChange={(e) => setXpMin(e.target.value === '' ? '' : Number(e.target.value))} placeholder="最小" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e5e5', fontSize: '13px' }} />
-                    <input type="number" value={xpMax} min={0} onChange={(e) => setXpMax(e.target.value === '' ? '' : Number(e.target.value))} placeholder="最大" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e5e5', fontSize: '13px' }} />
+                    <input type="number" value={xpMin} min={0} onChange={(e) => setXpMin(e.target.value === '' ? '' : Number(e.target.value))} placeholder="例: 0" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e5e5', fontSize: '13px' }} />
+                    <input type="number" value={xpMax} min={0} onChange={(e) => setXpMax(e.target.value === '' ? '' : Number(e.target.value))} placeholder="例: 100" style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e5e5', fontSize: '13px' }} />
                   </div>
                 </div>
                 {/* 並び替え（ポップアップ内）は削除されました */}

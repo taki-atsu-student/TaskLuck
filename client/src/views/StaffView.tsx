@@ -1,5 +1,5 @@
 import { useState, useEffect, Dispatch, SetStateAction } from 'react';
-import { User, ExtraWage } from '../models';
+import { User, ExtraWage, resolveUserRole } from '../models';
 
 const ROLE_LABELS: Record<string, string> = {
   manager: '店長',
@@ -102,7 +102,8 @@ export function StaffView({ isActive, users, setUsers, staffStats, onOpenStaffMo
           </thead>
           <tbody>
             {users.map((user) => {
-              const roleBadge = user.role === 'manager' ? <span className="b b-gray">店長</span> : user.role === 'staff' ? <span className="b b-blue">社員</span> : <span className="b b-gray">アルバイト</span>;
+              const resolvedRole = resolveUserRole(user);
+              const roleBadge = resolvedRole === 'manager' ? <span className="b b-gray">店長</span> : resolvedRole === 'staff' ? <span className="b b-blue">社員</span> : <span className="b b-gray">アルバイト</span>;
               return (
                 <tr
                   key={user.id}
@@ -244,7 +245,7 @@ export function StaffView({ isActive, users, setUsers, staffStats, onOpenStaffMo
                       <input
                         type="text"
                         value={w.title}
-                        placeholder="例：深夜時給"
+                        placeholder="例: 深夜時給"
                         onChange={(e) => updateExtraWage(w.id, 'title', e.target.value)}
                         style={inputStyle}
                       />
