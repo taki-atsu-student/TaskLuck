@@ -45,12 +45,23 @@ nav{flex:1;padding:8px 8px}
 .btn-logout:hover{color:#555}
 
 /* MAIN */
-main{flex:1;min-width:0;overflow-y:auto;width:100%}
+main{flex:1;min-width:0;overflow-y:auto;width:100%;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 .page{display:none;padding:28px 4%;max-width:100%;width:100%}
 .page.show{display:block}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:12px;flex-wrap:wrap}
 .pt{font-size:30px;font-weight:600;letter-spacing:-0.03em}
 .ps{font-size:12px;color:#888;margin-top:2px}
+.task-actions-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.task-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.task-toolbar-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.task-pool-count{font-size:12px;color:#666}
+.task-row-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.task-row-content{flex:1;min-width:0}
+.task-row-title{font-size:13px;font-weight:500}
+.task-row-desc{font-size:11px;color:#666;margin-top:4px;line-height:1.45}
+.task-row-meta{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#666;flex-wrap:wrap}
+.task-row-actions{display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex-shrink:0}
+.filter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 
 /* CARDS */
 .card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:18px 20px}
@@ -80,7 +91,8 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #e5e5e5;background:#fff;color:#1a1a1a;transition:all .12s;font-family:inherit}
 .btn:hover{background:#f5f5f7;border-color:#d5d5d5}
 .btn-dark{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-.btn-dark:hover{opacity:.85}
+.btn-dark:hover{background:#1a1a1a;border-color:#1a1a1a;opacity:1}
+#pg-task .btn-dark:hover{opacity:1}
 .btn-sm{padding:4px 10px;font-size:11px;border-radius:6px}
 .btn-danger{background:#fff;color:#dc2626;border-color:#fecaca}
 .btn-danger:hover{background:#fef2f2}
@@ -163,6 +175,16 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 .tabs{display:flex;gap:2px;border-bottom:1px solid #f0f0f0;margin-bottom:16px}
 .tab{padding:8px 14px;font-size:12px;cursor:pointer;border:none;background:transparent;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s;font-family:inherit}
 .tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+.tabs.desktop-tabs{display:flex}
+.tabs.mobile-tabs{display:none}
+
+/* Default: show desktop board, hide mobile-only board */
+.desktop-only{display:block}
+.mobile-only{display:none}
+
+/* Desktop vs Mobile task-board variants */
+.task-board.mobile-only{display:none}
+.task-board.desktop-only{display:grid}
 
 /* TASK ITEM */
 .ti{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f5f5f5}
@@ -176,7 +198,35 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 
 .sec-lbl{font-size:11px;color:#aaa;font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:640px){.dash-grid{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .dash-grid{grid-template-columns:1fr}
+  .page{padding:16px 12px 20px}
+  .ph{margin-bottom:14px;gap:8px}
+  .pt{font-size:22px}
+  .card{padding:12px}
+  .task-actions-row{width:100%;justify-content:flex-start;gap:8px}
+  .task-actions-row .btn{flex:1 1 calc(50% - 8px);justify-content:center;padding:8px 10px}
+  .task-toolbar{align-items:stretch;gap:8px}
+  .task-toolbar-controls{width:100%;gap:6px}
+  .task-toolbar-controls > *{flex:1 1 calc(50% - 6px);min-width:0}
+  .task-pool-count{width:100%;order:-1}
+  .tabs.desktop-tabs{display:none}
+  .tabs.mobile-tabs{display:flex;overflow-x:auto;width:100%}
+  .tab{padding:7px 10px;font-size:11px;white-space:nowrap}
+  .task-board{grid-template-columns:1fr;gap:10px;margin-top:10px}
+  .task-board-column{min-height:auto;padding:12px}
+  .task-board-column-list{max-height:38vh;overflow-y:auto;min-height:80px}
+  .task-board-column-header{font-size:12px}
+  .task-board-row{padding:10px;gap:8px}
+  .task-row-main{gap:8px}
+  .task-row-title{font-size:12px}
+  .task-row-desc{font-size:10px;margin-top:3px}
+  .task-row-meta{margin-top:6px;gap:6px;font-size:11px}
+  .task-row-actions{flex-direction:row;flex-wrap:wrap;justify-content:flex-start;gap:6px;align-items:center}
+  .filter-grid{grid-template-columns:1fr;gap:10px}
+  .tbl{font-size:12px}
+  .tbl th,.tbl td{padding:8px 7px}
+}
 
 /* ===== HTML VERSION ALIASES ===== */
 .lbox{background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:36px 32px;width:340px;box-shadow:0 14px 40px rgba(0,0,0,.06)}
@@ -299,7 +349,7 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
 @media(max-width:760px){.store-settings-page{padding:18px 14px}.store-toolbar{align-items:flex-start}.store-toolbar h1{font-size:24px;width:100%}.store-toolbar-left,.store-toolbar-right{width:100%;justify-content:flex-start}.store-panel{padding:18px 14px}.store-section-head{gap:12px}.store-section-head h2{font-size:18px}.staffing-grid{min-width:1040px}.store-btn{min-height:38px;padding:7px 12px;font-size:13px}}
 
 /* ===== MOBILE ===== */
-.mobile-header{display:none;align-items:center;justify-content:space-between;height:52px;padding:0 16px;background:#fff;border-bottom:1px solid #e5e5e5;position:sticky;top:0;z-index:100;flex-shrink:0}
+.mobile-header{display:none;align-items:center;justify-content:space-between;height:52px;padding:0 16px;background:#fff;border-bottom:1px solid #e5e5e5;position:sticky;top:0;z-index:100;flex-shrink:0;padding-top:env(safe-area-inset-top)}
 .mobile-logo-btn{display:flex;align-items:center;gap:8px;background:none;border:none;cursor:pointer;padding:4px 0;font-family:inherit}
 .mobile-logo-btn img{width:26px;height:26px;border-radius:6px}
 .mobile-logo-name{font-size:15px;font-weight:600;letter-spacing:-0.03em;color:#1a1a1a}
@@ -314,14 +364,62 @@ main{flex:1;min-width:0;overflow-y:auto;width:100%}
   .sidebar{position:fixed;inset:0 auto 0 0;width:240px;max-width:85vw;height:100%;transform:translateX(-100%);transition:transform .25s ease;z-index:300;border-right:1px solid #e5e5e5}
   .sidebar.mobile-open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.12)}
   .sb-close{display:block}
-  main{height:100%;overflow-y:auto}
+  main{height:100%;overflow-y:auto;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
   .page{padding:20px 4%}
   .pt{font-size:22px}
   .ph{margin-bottom:16px}
   .stats{grid-template-columns:repeat(2,1fr)}
   .dash-grid{grid-template-columns:1fr}
   .tbl th,.tbl td{padding:8px 8px;font-size:12px}
+  .card{padding:14px 14px 16px}
+  .task-actions-row,.task-toolbar-controls{width:100%;justify-content:flex-start}
+  .task-toolbar{align-items:flex-start}
+  .task-toolbar .tabs{width:100%;flex-wrap:wrap}
+  .tabs.desktop-tabs{display:none}
+  .tabs.mobile-tabs{display:flex}
+    .desktop-only{display:none}
+    .mobile-only{display:block}
+    /* Ensure task-board variants are overridden even if more specific selectors exist */
+    .task-board.desktop-only{display:none !important}
+    .task-board.mobile-only{display:block !important}
+  .task-board{grid-template-columns:1fr}
+  .task-board-progress{grid-template-columns:1fr}
+  .task-board-row{flex-direction:column;align-items:stretch;gap:10px}
+  /* TaskView-only mobile layout */
+  .task-view-page.page.show{display:flex;flex-direction:column;min-height:100%;height:100%;padding-bottom:0}
+  .task-view-page .card{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;height:100%;padding-bottom:0 !important}
+  .task-view-page .task-board.mobile-only{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;height:100%}
+  .task-view-page .task-board-column{flex:1 1 auto;min-height:0;height:100%}
+  .task-view-page .task-board-column-list{flex:1 1 auto;min-height:0;height:100%;overflow-y:auto;padding-bottom:0 !important}
+  .task-row-actions{align-items:flex-start;flex-direction:row;flex-wrap:wrap}
+  .filter-grid{grid-template-columns:1fr}
 }
+@media(max-width:430px){
+  body{font-size:13px}
+  .page{padding:16px 12px 20px}
+  .ph{gap:10px}
+  .pt{font-size:20px}
+  .card{padding:12px}
+  .btn,.btn-sm{justify-content:center}
+  .task-actions-row{flex-wrap:nowrap;overflow-x:auto;gap:6px;justify-content:flex-start}
+  .task-actions-row .btn{flex:0 0 auto;white-space:nowrap;padding:7px 10px;font-size:11px}
+  .task-toolbar-controls{flex-direction:column;align-items:stretch}
+  .task-toolbar-controls select{width:100%}
+  .stats{grid-template-columns:1fr}
+  .mobile-header{height:56px;padding:0 14px}
+  .sb-user{padding:10px 8px}
+  .modal{padding:18px}
+  .modal h3{font-size:14px}
+  .mfg input,.mfg select,.mfg textarea{font-size:12px}
+}
+@media(max-width:768px){
+  /* タスク一覧を画面内でスクロール可能にする */
+  .task-board-column-list{
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+  }
+}
+
 
 /* SHIFT EDIT - CALENDAR */
 .shift-edit-cal .cal-cell{cursor:pointer}
