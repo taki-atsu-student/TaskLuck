@@ -71,7 +71,7 @@ export default function App() {
     renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskCreateSubmit,
     openTaskModal, handleTaskModalSubmit, editingTaskId,
-    handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
+    handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, handleStaffDelete, staffStats,
     handleTaskTogglePool, handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
     password, setPassword,
   } = controller;
@@ -339,9 +339,11 @@ export default function App() {
               <StaffView
                 isActive={activePage === 'staff'}
                 users={users}
+                currentUser={currentUser}
                 setUsers={setUsers}
                 staffStats={staffStatsObj}
                 onOpenStaffModal={() => { setAsName(''); setAsRole('part'); setAsSalary(1050); setModal('modal-as'); }}
+                onDeleteStaff={handleStaffDelete}
               />
             </main>
           </div>
