@@ -94,8 +94,13 @@ export function BusinessInfoView({ isActive, businessInfo, updateBusinessInfo, r
   };
 
   const saveSettings = async () => {
-    await onSave();
+    try {
+      await onSave();
+    } catch {
+      toast('店舗設定の保存に失敗しました');
+    }
   };
+
   const cancelSettings = () => {
     resetBusinessInfo();
     toast('店舗設定をキャンセルしました');
