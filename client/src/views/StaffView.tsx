@@ -15,13 +15,17 @@ const inputStyle: React.CSSProperties = {
 type StaffViewProps = {
   isActive: boolean;
   users: User[];
+  currentUser: User | null;
   setUsers: Dispatch<SetStateAction<User[]>>;
   staffStats: { total: number; partCount: number; staffCount: number };
   onOpenStaffModal: () => void;
+  onDeleteStaff: (id: number) => Promise<void>;
 };
 
-export function StaffView({ isActive, users, setUsers, staffStats, onOpenStaffModal }: StaffViewProps) {
+export function StaffView({ isActive, users, currentUser, setUsers, staffStats, onOpenStaffModal, onDeleteStaff }: StaffViewProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editSalary, setEditSalary] = useState(0);
@@ -81,9 +85,25 @@ export function StaffView({ isActive, users, setUsers, staffStats, onOpenStaffMo
 
   return (
     <div className={`page ${isActive ? 'show' : ''}`} id="pg-staff">
-      <div className="ph">
+      <div className="ph" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <div><div className="pt">スタッフ管理</div></div>
-        <button className="btn btn-dark" type="button" onClick={onOpenStaffModal}>+ スタッフ追加</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {currentUser?.role === 'manager' && (
+            <button
+              className="btn"
+              type="button"
+              style={{ background: '#f8d7da', color: '#842029', border: '1px solid #f5c2c7' }}
+              onClick={() => {
+                const initial = users.find((user) => user.id !== currentUser.id);
+                setDeleteUserId(initial ? initial.id : null);
+                setShowDeleteModal(true);
+              }}
+            >
+              スタッフ削除
+            </button>
+          )}
+          <button className="btn btn-dark" type="button" onClick={onOpenStaffModal}>+ スタッフ追加</button>
+        </div>
       </div>
       <div className="stats" id="ss">
         <div className="sc"><div className="sl">総スタッフ</div><div className="sv">{staffStats.total}</div></div>
@@ -128,6 +148,61 @@ export function StaffView({ isActive, users, setUsers, staffStats, onOpenStaffMo
           </tbody>
         </table>
       </div>
+
+      {showDeleteModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false); }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: '16px', padding: '28px 32px', width: '380px', maxWidth: '90vw',
+            boxShadow: '0 12px 40px rgba(0,0,0,.18)',
+          }}>
+            <h3 style={{ marginTop: 0, marginBottom: '18px' }}>スタッフを削除</h3>
+            <div className="mfg"><label>削除するスタッフ</label>
+              <select
+                value={deleteUserId ?? ''}
+                onChange={(event) => {
+                  const rawValue = event.target.value;
+                  setDeleteUserId(rawValue === '' ? null : Number(rawValue));
+                }}
+                style={inputStyle}
+              >
+                <option value="">選択してください</option>
+                {users
+                  .filter((user) => user.id !== currentUser?.id)
+                  .map((user) => (
+                    <option key={user.id} value={user.id}>{user.name} ({ROLE_LABELS[user.role] ?? user.role})</option>
+                  ))}
+              </select>
+            </div>
+            <p style={{ color: '#842029', fontSize: '13px', margin: '12px 0 20px' }}>
+              この操作は取り消せません。削除したユーザーはMongoDBのusersコレクションからも削除されます。
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn" type="button" onClick={() => setShowDeleteModal(false)} style={{ flex: 1 }}>キャンセル</button>
+              <button
+                className="btn btn-dark"
+                type="button"
+                style={{ flex: 1 }}
+                disabled={deleteUserId === null}
+                onClick={async () => {
+                  if (deleteUserId !== null) {
+                    await onDeleteStaff(deleteUserId);
+                    setShowDeleteModal(false);
+                    setSelectedUser((prev) => (prev?.id === deleteUserId ? null : prev));
+                  }
+                }}
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedUser && (
         <div

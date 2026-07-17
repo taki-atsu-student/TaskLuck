@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Role, User } from '../models';
-import { createUser, updateUserPassword } from '../services/api';
+import { createUser, deleteUser, updateUserPassword } from '../services/api';
 
 type StaffDeps = {
   users: User[];
@@ -61,8 +61,20 @@ export const createStaffHandlers = ({
     }
   };
 
+  const handleStaffDelete = async (userId: number) => {
+    try {
+      await deleteUser(userId);
+      await refreshUsers();
+      toast('スタッフを削除しました');
+    } catch (e) {
+      console.error(e);
+      toast('スタッフの削除に失敗しました');
+    }
+  };
+
   return {
     handleStaffCreate,
     handlePasswordSave,
+    handleStaffDelete,
   };
 };

@@ -112,4 +112,20 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const db = await await getDb();
+
+    const result = await db.collection('users').deleteOne({ id });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'ユーザーが見つかりません' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
