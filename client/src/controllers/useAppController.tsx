@@ -276,6 +276,7 @@ export default function useAppController() {
   const handleCompleteGachaTask = gachaHandlers.handleCompleteGachaTask;
   const handleApproval = taskHandlers.handleApproval;
   const handleStaffCreate = staffHandlers.handleStaffCreate;
+  const handleStaffDelete = staffHandlers.handleStaffDelete;
   const unreadCount = notificationHandlers.unreadCount;
   const toggleNotif = notificationHandlers.toggleNotif;
   const readNotif = notificationHandlers.readNotif;
@@ -297,7 +298,7 @@ export default function useAppController() {
     renderCalendar, taskList, gachaTask, handleShiftRequestSubmit: shiftHandlers.handleShiftRequestSubmit, handleShiftCreateSubmit: shiftHandlers.handleShiftCreateSubmit,
     handleTaskStart: taskHandlers.handleTaskStart, handleRequestDone: taskHandlers.handleRequestDone, handleTaskDelete: taskHandlers.handleTaskDelete, handleTaskTogglePool: taskHandlers.handleTaskTogglePool, handleTaskCreateSubmit: taskHandlers.handleTaskCreateSubmit,
     openTaskModal: taskHandlers.openTaskModal, handleTaskModalSubmit: taskHandlers.handleTaskModalSubmit, editingTaskId, setEditingTaskId,
-    handleGacha: gachaHandlers.handleGacha, handleCompleteGachaTask: gachaHandlers.handleCompleteGachaTask, handleApproval: taskHandlers.handleApproval, handleStaffCreate: staffHandlers.handleStaffCreate, staffStats,
+    handleGacha: gachaHandlers.handleGacha, handleCompleteGachaTask: gachaHandlers.handleCompleteGachaTask, handleApproval: taskHandlers.handleApproval, handleStaffCreate: staffHandlers.handleStaffCreate, handleStaffDelete: staffHandlers.handleStaffDelete, staffStats,
     handleBulkShiftRequestSubmit: shiftHandlers.handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
     password, setPassword,
   } as const;

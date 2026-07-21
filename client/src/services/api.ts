@@ -39,6 +39,7 @@ export const fetchUsers = () => requestJson<User[]>('/api/users');
 export const createUser = (payload: Record<string, unknown>) => requestJson<User>('/api/users', { method: 'POST', body: JSON.stringify(payload) });
 export const updateUser = (id: number | string, payload: Record<string, unknown>) => requestJson<User>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 export const updateUserPassword = (id: number | string, password: string) => requestJson<User>(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify({ password }) });
+export const deleteUser = (id: number | string) => requestJson<{ success: boolean }>(`/api/users/${id}`, { method: 'DELETE' });
 
 export const fetchShifts = () => requestJson<Shift[]>('/api/shifts');
 export const createShiftRequest = (payload: Record<string, unknown>) => requestJson<Shift>('/api/shifts', { method: 'POST', body: JSON.stringify(payload) });
