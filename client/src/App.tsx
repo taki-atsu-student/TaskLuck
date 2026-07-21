@@ -64,13 +64,13 @@ export default function App() {
     notificationOpen, notifications, unreadCount, toggleNotif, readNotif, clearNotifs, handleNotificationAction,
     reqDate, setReqDate, reqStart, setReqStart, reqEnd, setReqEnd, reqOff, setReqOff, reqNote, setReqNote,
     csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd,
-    ctName, setCtName, ctDesc, setCtDesc, ctPri, setCtPri, ctXp, setCtXp,
+    ctName, setCtName, ctDesc, setCtDesc, ctPri, setCtPri, ctXp, setCtXp, ctInPool, setCtInPool,
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
     toast, handleLogin, logout, handleNav, isMgr, isLeadership, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
     renderCalendar, taskList, gachaTask, handleShiftRequestSubmit, handleShiftCreateSubmit,
     handleTaskStart, handleRequestDone, handleTaskDelete, handleTaskCreateSubmit,
-    openTaskModal, handleTaskModalSubmit, editingTaskId,
+    openTaskModal, handleTaskModalSubmit, editingTaskId, setEditingTaskId,
     handleGacha, handleCompleteGachaTask, handleApproval, handleStaffCreate, staffStats,
     handleTaskTogglePool, handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
     password, setPassword,
@@ -396,8 +396,23 @@ export default function App() {
             <option value="low">低</option>
           </select></div>
           <div className="mfg"><label>XP報酬</label><input type="number" value={ctXp} min={10} max={200} step={10} onChange={(event) => setCtXp(Number(event.target.value))} /></div>
-          <div className="mf">
+          <div className="mfg"><label>ガチャプール</label><select value={ctInPool ? 'in' : 'out'} onChange={(event) => setCtInPool(event.target.value === 'in')}>
+            <option value="in">ガチャプール内</option>
+            <option value="out">ガチャプール外</option>
+          </select></div>
+          <div className="mf" style={{ gap: '10px', flexWrap: 'wrap' }}>
             <button className="btn" type="button" onClick={() => setModal(null)}>キャンセル</button>
+            {editingTaskId !== null ? (
+              <button className="btn btn-danger" type="button" onClick={async () => {
+                const deleted = await handleTaskDelete(editingTaskId);
+                if (deleted) {
+                  setModal(null);
+                  setEditingTaskId(null);
+                }
+              }}>
+                削除
+              </button>
+            ) : null}
             <button className="btn btn-dark" type="button" onClick={handleTaskModalSubmit}>
               {editingTaskId === null ? '追加' : '保存'}
             </button>

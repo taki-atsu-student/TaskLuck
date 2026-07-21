@@ -53,6 +53,7 @@ export default function useAppController() {
   const [ctDesc, setCtDesc] = useState('');
   const [ctPri, setCtPri] = useState<Priority>('mid');
   const [ctXp, setCtXp] = useState(50);
+  const [ctInPool, setCtInPool] = useState<boolean>(true);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [asName, setAsName] = useState('');
   const [asRole, setAsRole] = useState<Role>('part');
@@ -210,6 +211,7 @@ export default function useAppController() {
     ctDesc,
     ctPri,
     ctXp,
+    ctInPool,
     editingTaskId,
     setTasks,
     setUsers,
@@ -219,6 +221,7 @@ export default function useAppController() {
     setCtDesc,
     setCtPri,
     setCtXp,
+    setCtInPool,
     refreshTasks,
     refreshUsers,
     addNotification: notificationHandlers.addNotification,
@@ -287,13 +290,13 @@ export default function useAppController() {
     notificationOpen, setNotificationOpen, notifications, setNotifications, unreadCount: notificationHandlers.unreadCount, toggleNotif: notificationHandlers.toggleNotif, readNotif: notificationHandlers.readNotif, clearNotifs: notificationHandlers.clearNotifs, handleNotificationAction: notificationHandlers.handleNotificationAction,
     reqDate, setReqDate, reqStart, setReqStart, reqEnd, setReqEnd, reqOff, setReqOff, reqNote, setReqNote,
     csUid, setCsUid, csDate, setCsDate, csStart, setCsStart, csEnd, setCsEnd,
-    ctName, setCtName, ctDesc, setCtDesc, ctPri, setCtPri, ctXp, setCtXp,
+    ctName, setCtName, ctDesc, setCtDesc, ctPri, setCtPri, ctXp, setCtXp, ctInPool, setCtInPool,
     asName, setAsName, asRole, setAsRole, asSalary, setAsSalary,
     toast, handleLogin, logout, handleNav, isMgr, isLeadership, isStf,
     activeNavItems, todayIso, dashboardStats, renderTodayShifts, dashboardTasks,
     renderCalendar, taskList, gachaTask, handleShiftRequestSubmit: shiftHandlers.handleShiftRequestSubmit, handleShiftCreateSubmit: shiftHandlers.handleShiftCreateSubmit,
     handleTaskStart: taskHandlers.handleTaskStart, handleRequestDone: taskHandlers.handleRequestDone, handleTaskDelete: taskHandlers.handleTaskDelete, handleTaskTogglePool: taskHandlers.handleTaskTogglePool, handleTaskCreateSubmit: taskHandlers.handleTaskCreateSubmit,
-    openTaskModal: taskHandlers.openTaskModal, handleTaskModalSubmit: taskHandlers.handleTaskModalSubmit, editingTaskId,
+    openTaskModal: taskHandlers.openTaskModal, handleTaskModalSubmit: taskHandlers.handleTaskModalSubmit, editingTaskId, setEditingTaskId,
     handleGacha: gachaHandlers.handleGacha, handleCompleteGachaTask: gachaHandlers.handleCompleteGachaTask, handleApproval: taskHandlers.handleApproval, handleStaffCreate: staffHandlers.handleStaffCreate, staffStats,
     handleBulkShiftRequestSubmit: shiftHandlers.handleBulkShiftRequestSubmit, handleSaveBusinessInfo,
     password, setPassword,
