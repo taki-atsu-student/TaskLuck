@@ -10,6 +10,7 @@ type TaskDeps = {
   ctDesc: string;
   ctPri: Priority;
   ctXp: number;
+  ctInPool: boolean;
   editingTaskId: number | null;
   setTasks: Dispatch<SetStateAction<Task[]>>;
   setUsers: Dispatch<SetStateAction<User[]>>;
@@ -19,6 +20,7 @@ type TaskDeps = {
   setCtDesc: Dispatch<SetStateAction<string>>;
   setCtPri: Dispatch<SetStateAction<Priority>>;
   setCtXp: Dispatch<SetStateAction<number>>;
+  setCtInPool: Dispatch<SetStateAction<boolean>>;
   refreshTasks: () => Promise<void>;
   refreshUsers: () => Promise<void>;
   addNotification: (title: string, sub: string, uid: number, taskId?: number) => Promise<void>;
@@ -33,6 +35,7 @@ export const createTaskHandlers = ({
   ctDesc,
   ctPri,
   ctXp,
+  ctInPool,
   editingTaskId,
   setTasks,
   setUsers,
@@ -42,6 +45,7 @@ export const createTaskHandlers = ({
   setCtDesc,
   setCtPri,
   setCtXp,
+  setCtInPool,
   refreshTasks,
   refreshUsers,
   addNotification,
@@ -74,15 +78,17 @@ export const createTaskHandlers = ({
     }
   };
 
-  const handleTaskDelete = async (id: number) => {
-    if (!window.confirm('本当に削除しますか？')) return;
+  const handleTaskDelete = async (id: number): Promise<boolean> => {
+    if (!window.confirm('本当に削除しますか？')) return false;
     try {
       await deleteTask(id);
       toast('削除しました');
       await refreshTasks();
+      return true;
     } catch (error) {
       console.error('削除エラー:', error);
       toast('通信エラーが発生しました');
+      return false;
     }
   };
 
@@ -117,7 +123,7 @@ export const createTaskHandlers = ({
         pri: ctPriParam,
         xp: ctXpParam,
         st: 'pending',
-        inPool: true,
+        inPool: ctInPool,
       });
       await refreshTasks();
       setModalFn(null);
@@ -134,12 +140,14 @@ export const createTaskHandlers = ({
       setCtDesc(task.desc);
       setCtPri(task.pri);
       setCtXp(task.xp);
+      setCtInPool(task.inPool ?? true);
     } else {
       setEditingTaskId(null);
       setCtName('');
       setCtDesc('');
       setCtPri('mid');
       setCtXp(50);
+      setCtInPool(true);
     }
     setModal('modal-ct');
   };
@@ -150,11 +158,11 @@ export const createTaskHandlers = ({
       return;
     }
 
-    const payload = { name: ctName.trim(), desc: ctDesc.trim(), pri: ctPri, xp: ctXp };
+    const payload = { name: ctName.trim(), desc: ctDesc.trim(), pri: ctPri, xp: ctXp, inPool: ctInPool };
 
     try {
       if (editingTaskId === null) {
-        await createTask({ ...payload, inPool: true });
+        await createTask({ ...payload, inPool: ctInPool });
         toast('タスクを追加しました');
       } else {
         await updateTask(editingTaskId, payload);

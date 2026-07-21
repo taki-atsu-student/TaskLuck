@@ -27,8 +27,6 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
   const [sortKey, setSortKey] = useState<'name' | 'pri' | 'to' | 'xp' | 'st'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showTaskMenu, setShowTaskMenu] = useState(false);
   const [editNotice, setEditNotice] = useState('');
   const editNoticeTimeout = useRef<number | null>(null);
   const [dragTaskId, setDragTaskId] = useState<number | null>(null);
@@ -84,12 +82,14 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
     setDragTaskId(null);
   };
 
+  const handleTaskClick = (task: Task) => {
+    if (onEditTask) onEditTask(task);
+  };
+
   const toggleTaskSelection = (taskId: number, selected: boolean) => {
     setSelectedTaskIds((prev) => selected ? [...prev, taskId] : prev.filter((id) => id !== taskId));
   };
 
-  const selectedCount = selectedTaskIds.length;
-  const selectedTask = selectedCount === 1 ? allTasks.find((task) => task.id === selectedTaskIds[0]) : undefined;
   const isAllTab = tFilter === 'all';
   const mobileTabs = [
     { key: 'all', label: 'すべて' },
@@ -107,16 +107,20 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
     }
     if (key === 'progress') {
       setTFilter('progress');
+      setPoolFilter('all');
       return;
     }
     if (key === 'done') {
       setTFilter('done');
+      setPoolFilter('all');
       return;
     }
     if (key === 'pool-in') {
+      setTFilter('all');
       setPoolFilter('in');
       return;
     }
+    setTFilter('all');
     setPoolFilter('out');
   };
 
@@ -146,14 +150,6 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
     };
   }, [editNotice]);
 
-  const handleDeleteSelected = () => {
-    if (!onDeleteTask) return;
-    selectedTaskIds.forEach((taskId) => onDeleteTask(taskId));
-    setSelectedTaskIds([]);
-    setShowDeleteConfirm(false);
-    setEditNotice('');
-  };
-
   const renderTaskRow = (task: Task, showCheckbox: boolean) => {
     const assignee = task.to ? users.find((user) => user.id === task.to) : null;
     const selected = selectedTaskIds.includes(task.id);
@@ -163,6 +159,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         className={`task-board-row${dragTaskId === task.id ? ' dragging' : ''}`}
         draggable
         onDragStart={() => handleDragStart(task.id)}
+        onClick={() => handleTaskClick(task)}
       >
         <div className="task-row-main">
           {showCheckbox && (
@@ -182,7 +179,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
             </div>
           </div>
         </div>
-        <div className="task-row-actions">
+        <div className="task-row-actions" onClick={(e) => e.stopPropagation()}>
           {priorityBadge(task.pri)}
           {renderTaskActions(task)}
         </div>
@@ -196,96 +193,16 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
         <div><div className="pt">タスク管理</div></div>
         {isStf ? (
           <div className="task-actions-row">
-
-  <button
-    className="btn btn-dark"
-    type="button"
-    onClick={() => setShowTaskMenu(true)}
-  >
-    タスク編集・削除
-  </button>
-
-  <button
-    className="btn btn-dark"
-    id="btn-ct"
-    type="button"
-    onClick={onOpenTaskModal}
-  >
-    + タスク追加
-  </button>
-
-</div>
+            <button
+              className="btn btn-dark"
+              id="btn-ct"
+              type="button"
+              onClick={onOpenTaskModal}
+            >
+              + タスク追加
+            </button>
+          </div>
         ) : null}
-        {showTaskMenu && (
-  <div
-    className="overlay open"
-    style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center"
-    }}
-    onClick={(e) => {
-      if (e.target === e.currentTarget) {
-        setShowTaskMenu(false);
-      }
-    }}
-  >
-    <div
-      style={{
-        background: "#fff",
-        width: "420px",
-        borderRadius: "12px",
-        padding: "24px"
-      }}
-    >
-      <h3>タスク編集・削除</h3>
-
-      <p>
-        編集・削除したいタスクにチェックを入れてください。
-      </p>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "10px",
-          marginTop: "20px"
-        }}
-      >
-        <button
-          className="btn"
-          onClick={() => setShowTaskMenu(false)}
-        >
-          キャンセル
-        </button>
-
-        <button
-          className="btn btn-dark"
-          disabled={selectedCount !== 1}
-          onClick={() => {
-            if (selectedTask && onEditTask) {
-              onEditTask(selectedTask);
-              setShowTaskMenu(false);
-            }
-          }}
-        >
-          編集
-        </button>
-
-        <button
-          className="btn btn-danger"
-          disabled={selectedCount === 0}
-          onClick={() => {
-            setShowTaskMenu(false);
-            setShowDeleteConfirm(true);
-          }}
-        >
-          削除
-        </button>
-      </div>
-    </div>
-  </div>
-)}
       </div>
       <div className="card">
         <div className="task-toolbar">
@@ -400,24 +317,6 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
           </div>
         </div>
         
-        {showDeleteConfirm ? (
-          <div className="overlay open" style={{ justifyContent: 'center', alignItems: 'center', display: 'flex' }} onClick={(event) => { if (event.target === event.currentTarget) setShowDeleteConfirm(false); }}>
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: 'min(420px,100%)', boxShadow: '0 15px 45px rgba(0,0,0,0.12)' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ margin: 0 }}>タスク削除の確認</h3>
-              </div>
-              <div style={{ color: '#333', fontSize: '14px', lineHeight: 1.6 }}>
-                選択中の {selectedCount} 件のタスクを削除します。
-                この操作は元に戻せません。よろしいですか？
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                <button className="btn" type="button" onClick={() => setShowDeleteConfirm(false)}>キャンセル</button>
-                <button className="btn btn-danger" type="button" onClick={handleDeleteSelected}>削除</button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
         {tFilter === 'all' ? (
           <>
             <div className="task-board desktop-only">
@@ -462,7 +361,7 @@ export function TaskView({ isActive, isStf, tFilter, setTFilter, tasksForView, a
                 <div className="task-board-column-list">
                   {filteredTasks.length === 0 ? (
                     <div className="task-board-empty">タスクはありません</div>
-                  ) : filteredTasks.map((task) => renderTaskRow(task, true))}
+                  ) : filteredTasks.map((task) => renderTaskRow(task, false))}
                 </div>
               </div>
             </div>
